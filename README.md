@@ -96,5 +96,6 @@ EVIS/
 
 ## ✏️ Autor
 
-Proyecto desarrollado por estudiantes de Ingeniería Informática. Para más información o colaboraciones, contacta con los autores.
-
+Proyecto desarrollado por estudiantes de la UPM en colaboración con el CTB. Para más información o colaboraciones, contacta con los autores.
+Alicia Guzman  
+Jaime Capdepon Fraile           email:capdepon28@gmail.com 
