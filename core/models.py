@@ -33,7 +33,7 @@ class Alumno(models.Model):
     def __str__(self):
         return f"{self.nombre} {self.apellidos}"
     
-    
+
 class EjercicioAlumno(models.Model):
     id_ejercicio_alum = models.AutoField(primary_key=True)
     enunciado = models.ForeignKey(EnunciadoEjercicio, on_delete=models.PROTECT, related_name='ejercicios_alumno')
@@ -43,6 +43,7 @@ class EjercicioAlumno(models.Model):
     correcto_ocr = models.BooleanField(default=False)
     correccion_ocr_hum = models.TextField()
     calif_profesor_solo = models.IntegerField()
+    estado = models.CharField(max_length=50)
 
     def __str__(self):
         return f"EjercicioAlumno {self.id_ejercicio_alum}"
