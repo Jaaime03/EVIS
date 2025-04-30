@@ -2,6 +2,7 @@ import os
 import zipfile
 
 from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 from rest_framework.decorators import api_view, parser_classes
@@ -11,6 +12,30 @@ from .models import Examen, EnunciadoEjercicio, EjercicioAlumno, Error, Alumno, 
 from .serializers import ExamenSerializer, EnunciadoEjercicioSerializer, EjercicioAlumnoSerializer, ErrorSerializer, AlumnoSerializer, AlumnoErrorEjercicioSerializer
 from utils.procesar_ocr import procesar_ocr
 from utils.detectar_errores import detectar_errores
+
+class ExamenViewSet(viewsets.ModelViewSet):
+    queryset = Examen.objects.all()
+    serializer_class = ExamenSerializer
+
+class EnunciadoEjercicioViewSet(viewsets.ModelViewSet):
+    queryset = EnunciadoEjercicio.objects.all()
+    serializer_class = EnunciadoEjercicioSerializer
+
+class EjercicioAlumnoViewSet(viewsets.ModelViewSet):
+    queryset = EjercicioAlumno.objects.all()
+    serializer_class = EjercicioAlumnoSerializer
+
+class ErrorViewSet(viewsets.ModelViewSet):
+    queryset = Error.objects.all()
+    serializer_class = ErrorSerializer
+
+class AlumnoViewSet(viewsets.ModelViewSet):
+    queryset = Alumno.objects.all()
+    serializer_class = AlumnoSerializer
+
+class AlumnoErrorEjercicioViewSet(viewsets.ModelViewSet):
+    queryset = AlumnoErrorEjercicio.objects.all()
+    serializer_class = AlumnoErrorEjercicioSerializer
 
 
 @api_view(['POST'])
