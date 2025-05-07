@@ -1,183 +1,178 @@
+# core/views.py
 import os
 import zipfile
-
-from rest_framework import status
-from rest_framework import viewsets
-from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser
-from rest_framework.decorators import api_view, parser_classes
-
 from django.conf import settings
+from django.core.files.storage import default_storage
+from rest_framework.views import APIView
+from rest_framework.generics import ListAPIView
+from rest_framework.response import Response
+from core.models import Examen, EnunciadoEjercicio, EjercicioAlumno, Alumno
+from core.utils.procesar_ocr import procesar_ocr
+from core.utils.detectar_errores import detectar_errores
+from core.pagination import ImagenOCRPagination, ErroresAlumnoPagination
+from rest_framework import viewsets
 from .models import Examen, EnunciadoEjercicio, EjercicioAlumno, Error, Alumno, AlumnoErrorEjercicio
-from .serializers import ExamenSerializer, EnunciadoEjercicioSerializer, EjercicioAlumnoSerializer, ErrorSerializer, AlumnoSerializer, AlumnoErrorEjercicioSerializer
-from utils.procesar_ocr import procesar_ocr
-from utils.detectar_errores import detectar_errores
+from .serializers import ExamenSerializer, EnunciadoEjercicioSerializer, EjercicioAlumnoSerializer, ErrorSerializer, AlumnoSerializer, AlumnoErrorEjercicioSerializer, ImagenOCRSerializer
+from django.shortcuts import get_object_or_404
 
+
+# Vista para manejar Examenes
 class ExamenViewSet(viewsets.ModelViewSet):
     queryset = Examen.objects.all()
     serializer_class = ExamenSerializer
 
+# Vista para manejar Enunciados
 class EnunciadoEjercicioViewSet(viewsets.ModelViewSet):
     queryset = EnunciadoEjercicio.objects.all()
     serializer_class = EnunciadoEjercicioSerializer
 
+# Vista para manejar Ejercicios de Alumno
 class EjercicioAlumnoViewSet(viewsets.ModelViewSet):
     queryset = EjercicioAlumno.objects.all()
     serializer_class = EjercicioAlumnoSerializer
 
+# Vista para manejar Errores
 class ErrorViewSet(viewsets.ModelViewSet):
     queryset = Error.objects.all()
     serializer_class = ErrorSerializer
 
+# Vista para manejar Alumnos
 class AlumnoViewSet(viewsets.ModelViewSet):
     queryset = Alumno.objects.all()
     serializer_class = AlumnoSerializer
 
+# Vista para manejar los errores de los alumnos
 class AlumnoErrorEjercicioViewSet(viewsets.ModelViewSet):
     queryset = AlumnoErrorEjercicio.objects.all()
     serializer_class = AlumnoErrorEjercicioSerializer
 
-
-@api_view(['POST'])
-def crear_examen(request):
-    """Crear un nuevo examen."""
-    if request.method == 'POST':
-        serializer = ExamenSerializer(data=request.data)
-        if serializer.is_valid():
-            examen = serializer.save()
-            return Response({'id_examen': examen.id_examen}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['POST'])
-def crear_enunciado_ejercicio(request):
-    """Crear un nuevo enunciado de ejercicio para un examen existente."""
-    if request.method == 'POST':
-        examen_id = request.data.get('examen_id')
+class SubirEjercicioView(APIView):
+    def post(self, request):
         try:
-            examen = Examen.objects.get(id_examen=examen_id)
-        except Examen.DoesNotExist:
-            return Response({'error': 'Examen no encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
+            # 1. Recoger datos del formulario
+            asignatura = request.data['asignatura']
+            convocatoria = request.data['convocatoria']
+            fecha_realizacion = request.data['fecha_realizacion']
+            nombre_ejercicio = request.data['nombre_ejercicio']
+            enunciado_ejerc = request.data['enunciado_ejerc']
+            estructura_tablas = request.data['estructura_tablas']
+            puntuacion = request.data['puntuacion']
+            archivo_zip = request.FILES['zip']
 
-        # Ahora añadimos el enunciado del ejercicio
-        data = request.data
-        data['examen'] = examen.id_examen 
-        serializer = EnunciadoEjercicioSerializer(data=data)
-        if serializer.is_valid():
-            enunciado = serializer.save()
-            return Response({'id_enunciado_ejercicio': enunciado.id_enun_ejercicio}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # 2. Crear Examen
+            examen = Examen.objects.create(
+                asignatura=asignatura,
+                convocatoria=convocatoria,
+                fecha_realizacion=fecha_realizacion
+            )
 
-@api_view(['POST'])
-@parser_classes([MultiPartParser])
-def subir_imagenes_ejercicio(request):
-    """
-    Recibe un archivo ZIP con imágenes, las descomprime y las guarda en una carpeta nombrada con el id_enun_ejercicio.
-    """
-    zip_file = request.FILES.get('archivo')
-    id_enun_ejercicio = request.POST.get('id_enun_ejercicio')
+            # 3. Crear EnunciadoEjercicio
+            enunciado = EnunciadoEjercicio.objects.create(
+                nombre_ejercicio=nombre_ejercicio,
+                enunciado_ejerc=enunciado_ejerc,
+                estructura_tablas=estructura_tablas,
+                puntuacion_ejercicio=puntuacion,
+                examen=examen
+            )
 
-    if not zip_file or not id_enun_ejercicio:
-        return Response({"error": "Se requiere un archivo ZIP y un id_enun_ejercicio."}, status=status.HTTP_400_BAD_REQUEST)
+            # 4. Guardar ZIP temporalmente
+            zip_path = default_storage.save('tmp/fotos.zip', archivo_zip)
+            zip_absoluto = os.path.join(settings.MEDIA_ROOT, zip_path)
 
-    try:
-        enunciado = EnunciadoEjercicio.objects.get(id_enun_ejercicio=id_enun_ejercicio)
-    except EnunciadoEjercicio.DoesNotExist:
-        return Response({"error": "EnunciadoEjercicio no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            # 5. Crear carpeta destino
+            carpeta_destino = os.path.join(settings.MEDIA_ROOT, f'ejercicios/{enunciado.id_enun_ejercicio}')
+            os.makedirs(carpeta_destino, exist_ok=True)
 
-    # Crear ruta donde se guardarán las imágenes
-    carpeta_destino = os.path.join(settings.MEDIA_ROOT, 'ejercicios', str(id_enun_ejercicio))
-    os.makedirs(carpeta_destino, exist_ok=True)
+            # 6. Extraer ZIP
+            with zipfile.ZipFile(zip_absoluto, 'r') as zip_ref:
+                zip_ref.extractall(carpeta_destino)
 
-    # Guardar ZIP temporalmente y descomprimir
-    zip_path = os.path.join(carpeta_destino, "temp.zip")
-    with open(zip_path, 'wb+') as f:
-        for chunk in zip_file.chunks():
-            f.write(chunk)
+            # 7. Crear objetos EjercicioAlumno
+            for nombre_archivo in os.listdir(carpeta_destino):
+                if nombre_archivo.lower().endswith(('.jpg', '.jpeg', '.png')):
+                    alumno_id = os.path.splitext(nombre_archivo)[0]
+                    try:
+                        alumno = Alumno.objects.get(id_alumno=int(alumno_id))
+                        url_foto = f"ejercicios/{enunciado.id_enun_ejercicio}/{nombre_archivo}"
 
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(carpeta_destino)
+                        EjercicioAlumno.objects.create(
+                            enunciado=enunciado,
+                            alumno=alumno,
+                            url_foto_ejerc=url_foto,
+                            estado='Pendiente'
+                        )
+                    except Alumno.DoesNotExist:
+                        continue
 
-    os.remove(zip_path)  # Eliminar el zip después de extraer
+            # 8. Ejecutar OCR
+            transcripciones = procesar_ocr(carpeta_destino)
 
-    # Crear EjercicioAlumno para cada imagen
-    creados = 0
-    for archivo in sorted(os.listdir(carpeta_destino)):
-        if archivo.lower().endswith(('.jpg', '.jpeg', '.png')):
-            try:
-                id_alumno = int(os.path.splitext(archivo)[0])
-                alumno = Alumno.objects.get(id_alumno=id_alumno)
+            # 9. Ejecutar corrección de errores
+            detectar_errores(transcripciones, enunciado.enunciado_ejerc, enunciado.estructura_tablas)
 
-                ruta_web = os.path.join('ejercicios', str(id_enun_ejercicio), archivo)
-                ejercicio = EjercicioAlumno.objects.create(
-                    enunciado=enunciado,
-                    url_foto_ejerc=os.path.join(settings.MEDIA_URL, ruta_web),
-                    ocr_imag_to_text="",
-                    correcto_ocr=False,
-                    correccion_ocr_hum="",
-                    calif_profesor_solo=0,
-                    alumno=alumno 
-                )
-                creados += 1
-            except Alumno.DoesNotExist:
-                continue
-            except Exception as e:
-                print(f"Error creando EjercicioAlumno para {archivo}: {e}")
+            return Response({'mensaje': 'Ejercicio creado y corregido correctamente'}, status=201)
 
-    return Response({"mensaje": f"Imágenes procesadas correctamente. {creados} ejercicios creados."}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
 
-@api_view(['POST'])
-def procesar_ocr_api(request):
-    """
-    Procesa las imágenes almacenadas localmente en una carpeta específica.
-    Se debe proporcionar el id_enun_ejercicio (la carpeta se espera en media/ejercicios/<id_enun_ejercicio>).
-    """
-    id_enun_ejercicio = request.data.get('id_enun_ejercicio')
-    if not id_enun_ejercicio:
-        return Response({"error": "Se requiere el id_enun_ejercicio."}, status=status.HTTP_400_BAD_REQUEST)
+class ErrorInformacionView(APIView):
+    def get(self, request):
+        errores = Error.objects.all()
+        data = []
 
-    carpeta = os.path.join(settings.MEDIA_ROOT, 'ejercicios', str(id_enun_ejercicio))
-    if not os.path.exists(carpeta):
-        return Response({"error": f"No existe la carpeta de imágenes para el ejercicio {id_enun_ejercicio}."}, status=status.HTTP_404_NOT_FOUND)
+        for error in errores:
+            count_alumnos = AlumnoErrorEjercicio.objects.filter(error=error).values('alumno').distinct().count()
 
-    try:
-        resultados = procesar_ocr(carpeta)
-        return Response({"mensaje": "OCR procesado correctamente", "resultados": resultados}, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            data.append({
+                'id_error': error.id_error,
+                'descripcion': error.descripcion,
+                'num_alumnos': count_alumnos,
+                'penalizacion_llm': error.penalizacion_llm,
+                'penalizacion_prof': error.penalizacion_prof
+            })
 
-@api_view(['POST'])
-def procesar_correccion_api(request):
-    """
-    Procesa la corrección automática de errores a partir del id_enun_ejercicio.
-    Usa las transcripciones ya guardadas en EjercicioAlumno.
-    """
-    id_enun_ejercicio = request.data.get("id_enun_ejercicio")
+        return Response(data, status=200)
 
-    if not id_enun_ejercicio:
-        return Response({"error": "Se requiere el id_enun_ejercicio."}, status=status.HTTP_400_BAD_REQUEST)
+class ActualizarPenalizacionProfView(APIView):
+    def patch(self, request, pk):
+        try:
+            error = Error.objects.get(pk=pk)
+        except Error.DoesNotExist:
+            return Response({"error": "Error no encontrado"}, status=404)
 
-    try:
-        enunciado = EnunciadoEjercicio.objects.get(id_enun_ejercicio=id_enun_ejercicio)
-    except EnunciadoEjercicio.DoesNotExist:
-        return Response({"error": "EnunciadoEjercicio no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        nueva_penalizacion = request.data.get("penalizacion_prof")
+        if nueva_penalizacion is None:
+            return Response({"error": "Se requiere 'penalizacion_prof'"}, status=400)
 
-    ejercicios = EjercicioAlumno.objects.filter(enunciado=enunciado, correcto_ocr=True)
+        try:
+            error.penalizacion_prof = float(nueva_penalizacion)
+            error.save()
+            return Response({"mensaje": "Penalización actualizada correctamente"}, status=200)
+        except ValueError:
+            return Response({"error": "Valor de penalización inválido"}, status=400)
+        
+class ListaImagenesYTextosOCR(ListAPIView):
+    queryset = EjercicioAlumno.objects.all()
+    serializer_class = ImagenOCRSerializer
+    pagination_class = ImagenOCRPagination 
 
-    if not ejercicios.exists():
-        return Response({"error": "No hay ejercicios con OCR correcto para este enunciado."}, status=status.HTTP_400_BAD_REQUEST)
+class CorreccionOCRView(APIView):
+    def patch(self, request, pk):
+        ejercicio = get_object_or_404(EjercicioAlumno, pk=pk)
+        correcto_ocr = request.data.get('correcto_ocr')
+        correccion_ocr_hum = request.data.get('correccion_ocr_hum', '')
 
-    # Construir el diccionario esperado por detectar_errores
-    transcripciones = {
-        str(ej.alumno.id_alumno): {"ejercicio": ej.ocr_imag_to_text}
-        for ej in ejercicios
-    }
+        if correcto_ocr is None:
+            return Response({'error': 'Se requiere el campo correcto_ocr'}, status=400)
 
-    try:
-        errores = detectar_errores(
-            transcripciones=transcripciones,
-            enunciado=enunciado.enunciado,
-            tablas=enunciado.estructura_tablas
-        )
-        return Response({"mensaje": "Corrección completada", "errores": errores}, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if not isinstance(correcto_ocr, bool):
+            return Response({'error': 'El campo correcto_ocr debe ser booleano'}, status=400)
+
+        if not correcto_ocr and not correccion_ocr_hum:
+            return Response({'error': 'Si correcto_ocr es False, se debe incluir correccion_ocr_hum'}, status=400)
+
+        ejercicio.correcto_ocr = correcto_ocr
+        ejercicio.correccion_ocr_hum = correccion_ocr_hum if not correcto_ocr else ''
+        ejercicio.save()
+
+        return Response({'mensaje': 'Actualización exitosa'}, status=200)
