@@ -33,3 +33,8 @@ class AlumnoErrorEjercicioSerializer(serializers.ModelSerializer):
     class Meta:
         model = AlumnoErrorEjercicio
         fields = ['alumno', 'error', 'ejercicio_alumno', 'situacion']
+
+class ImagenOCRSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EjercicioAlumno
+        fields = ['id_ejercicio_alum', 'url_foto_ejerc', 'ocr_imag_to_text']
