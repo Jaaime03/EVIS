@@ -12,7 +12,7 @@ class Examen(models.Model):
 
 class EnunciadoEjercicio(models.Model):
     id_enun_ejercicio = models.AutoField(primary_key=True)
-    puntuacion_ejercicio = models.IntegerField()
+    puntuacion_ejercicio = models.FloatField()
     enunciado_ejerc = models.TextField()
     estructura_tablas = models.TextField()
     nombre_ejercicio = models.CharField(max_length=255)
