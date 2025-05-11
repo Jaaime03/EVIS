@@ -9,10 +9,10 @@ from rest_framework.response import Response
 from core.models import Examen, EnunciadoEjercicio, EjercicioAlumno, Alumno
 from core.utils.procesar_ocr import procesar_ocr
 from core.utils.detectar_errores import detectar_errores
-from core.pagination import ImagenOCRPagination, ErroresAlumnoPagination
+from core.pagination import ImagenOCRPagination, EjercicioAlumnoPagination
 from rest_framework import viewsets
 from .models import Examen, EnunciadoEjercicio, EjercicioAlumno, Error, Alumno, AlumnoErrorEjercicio
-from .serializers import ExamenSerializer, EnunciadoEjercicioSerializer, EjercicioAlumnoSerializer, ErrorSerializer, AlumnoSerializer, AlumnoErrorEjercicioSerializer, ImagenOCRSerializer
+from .serializers import ExamenSerializer, EnunciadoEjercicioSerializer, EjercicioAlumnoSerializer, ErrorSerializer, AlumnoSerializer, AlumnoErrorEjercicioSerializer, ImagenOCRSerializer, ResultadoAlumnoSerializer
 from django.shortcuts import get_object_or_404
 
 
@@ -103,6 +103,8 @@ class SubirEjercicioView(APIView):
                         )
                     except Alumno.DoesNotExist:
                         continue
+            
+            os.remove(zip_absoluto)
 
             # 8. Ejecutar OCR
             transcripciones = procesar_ocr(carpeta_destino)
@@ -176,3 +178,83 @@ class CorreccionOCRView(APIView):
         ejercicio.save()
 
         return Response({'mensaje': 'Actualización exitosa'}, status=200)
+
+class ListaResultadosPorEjercicio(ListAPIView):
+    serializer_class = ResultadoAlumnoSerializer
+    pagination_class = EjercicioAlumnoPagination
+
+    def get_queryset(self):
+        enun_id = self.kwargs.get('id_enunciado')
+        return EjercicioAlumno.objects.filter(enunciado__id_enun_ejercicio=enun_id)
+    
+
+class AnadirNuevoErrorView(APIView):
+    def post(self, request):
+        try:
+            id_alumno = request.data.get('id_alumno')
+            id_ejercicio_alumno = request.data.get('id_ejercicio_alumno')
+            descripcion = request.data.get('descripcion')
+            penalizacion_prof = request.data.get('penalizacion_prof')
+
+            if not all([id_alumno, id_ejercicio_alumno, descripcion, penalizacion_prof]):
+                return Response({"error": "Todos los campos son requeridos"}, status=400)
+
+            alumno = Alumno.objects.get(pk=id_alumno)
+            ejercicio = EjercicioAlumno.objects.get(pk=id_ejercicio_alumno)
+
+            # Crear el nuevo error
+            nuevo_error = Error.objects.create(
+                descripcion=descripcion,
+                penalizacion_llm=0,
+                penalizacion_prof=penalizacion_prof
+            )
+
+            # Asociar el error al alumno y ejercicio con situación 'Anadido'
+            AlumnoErrorEjercicio.objects.create(
+                alumno=alumno,
+                error=nuevo_error,
+                ejercicio_alumno=ejercicio,
+                situacion='Anadido'
+            )
+
+            return Response({
+                "mensaje": "Error creado y asociado correctamente",
+                "id_error": nuevo_error.id_error
+            }, status=201)
+
+        except Alumno.DoesNotExist:
+            return Response({"error": "Alumno no encontrado"}, status=404)
+        except EjercicioAlumno.DoesNotExist:
+            return Response({"error": "Ejercicio del alumno no encontrado"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+class ActualizarCalificacionProfesorView(APIView):
+    def patch(self, request, pk):
+        ejercicio = get_object_or_404(EjercicioAlumno, pk=pk)
+        nueva_calificacion = request.data.get("calif_profesor_solo")
+
+        if nueva_calificacion is None:
+            return Response({"error": "Se requiere el campo 'calif_profesor_solo'"}, status=400)
+
+        try:
+            ejercicio.calif_profesor_solo = float(nueva_calificacion)
+            ejercicio.save()
+            return Response({"mensaje": "Calificación actualizada correctamente"}, status=200)
+        except ValueError:
+            return Response({"error": "Valor de calificación inválido"}, status=400)
+
+class ActualizarSituacionErrorView(APIView):
+    def patch(self, request, pk):
+        alumno_error = get_object_or_404(AlumnoErrorEjercicio, pk=pk)
+        nueva_situacion = request.data.get("situacion")
+
+        if nueva_situacion not in ['Correcto', 'Incorrecto', 'Anadido', 'Añadido']:
+            return Response(
+                {"error": "Situación inválida. Debe ser 'Correcto', 'Incorrecto', 'Anadido' o 'Añadido'."},
+                status=400
+            )
+
+        alumno_error.situacion = nueva_situacion
+        alumno_error.save()
+        return Response({"mensaje": "Situación actualizada correctamente."}, status=200)
