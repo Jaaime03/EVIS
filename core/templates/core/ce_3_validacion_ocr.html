@@ -1,0 +1,842 @@
+{% extends 'core/base_ce.html' %}
+{% load static %}
+
+{% block title %}EVIS - Validación OCR{% endblock title %}
+
+{% block extra_css %}
+<style>
+    /* --- ESTILOS ESPECÍFICOS PARA ce_3_validacion_ocr.html --- */
+/* --- ESTILOS ESPECÍFICOS DE ce_2_carga.html --- */
+    .exercise-info-bar { display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; background-color: var(--white); padding: 15px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; max-width: 1200px; margin-bottom: 30px; }
+    .info-item { display: flex; flex-direction: column; align-items: center; padding: 5px 15px; text-align: center; min-width: 180px; }
+    .info-item strong { font-size: 0.9em; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; }
+    .info-item span { font-size: 1.1em; font-weight: 700; color: var(--text-primary); }
+    
+    .progress-section { width: 100%; max-width: 1200px; margin-bottom: 30px; padding: 25px; background-color: var(--white); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .progress-section h2 { text-align: center; font-size: clamp(20px, 3vw, 26px); font-weight: 800; margin-bottom: 25px; color: var(--text-primary); }
+    
+    .progress-bar-container { position: relative; height: 6px; background-color: #e0e0e0; border-radius: 3px; margin: 45px 0; }
+    .progress-bar-steps { display: flex; justify-content: space-between; position: absolute; width: 100%; top: 50%; transform: translateY(-50%); padding: 0 5px; }
+    .progress-step { display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; }
+    .progress-step .circle { width: 40px; height: 40px; border-radius: 50%; background-color: var(--white); border: 3px solid #cccccc; display: flex; justify-content: center; align-items: center; font-weight: bold; color: var(--text-secondary); margin-bottom: 8px; z-index: 1; transition: background-color 0.3s, border-color 0.3s, color 0.3s; }
+    .progress-step .label { font-size: 0.9em; color: var(--text-secondary); font-weight: 600; margin-top: 5px; width: 120px; }
+    
+    .progress-step.active .circle { border-color: var(--primary-blue); background-color: var(--primary-blue); color: var(--white); }
+    .progress-step.completed .circle { border-color: var(--success-green); background-color: var(--success-green); color: var(--white); }
+    .progress-step.active .label, .progress-step.completed .label { color: var(--text-primary); }
+    .progress-line { position: absolute; height: 100%; background-color: var(--primary-blue); border-radius: 3px; left: 0; width: 0%; z-index: 0; transition: width 0.5s ease-out; }
+    
+    .validation-ocr-container {
+        width: 100%;
+        max-width: 1300px; /* Un poco más ancho para las 3 columnas */
+        margin-bottom: 30px;
+        position: relative;
+
+    }
+
+    .validation-ocr-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .validation-ocr-header h2 {
+        font-size: clamp(24px, 3.5vw, 30px);
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    .image-navigation {
+        display: flex;
+        justify-content: space-between; /* Para espaciar el contador y los botones */
+        align-items: center;
+        margin-bottom: 25px;
+        padding: 10px;
+        background-color: var(--white);
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .image-navigation .validations-remaining {
+        font-size: 1em;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+    .image-navigation .nav-buttons button {
+        background-color: var(--secondary-blue);
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1.2em; /* Iconos más grandes */
+        margin-left: 10px;
+    }
+    .image-navigation .nav-buttons button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+
+    .ocr-validation-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        align-items: stretch; /* Para que las columnas tengan la misma altura */
+    }
+
+    .ocr-column {
+        background-color: var(--white);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        display: flex;
+        flex-direction: column; /* Para alinear título y contenido */
+    }
+    .ocr-column h3 {
+        font-size: 1.1em;
+        font-weight: 700;
+        margin-bottom: 15px;
+        color: var(--text-primary);
+        text-align: center;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--input-border);
+    }
+
+    /* Columna Imagen Original */
+    .original-image-area {
+        flex-grow: 1; /* Para que ocupe el espacio disponible */
+        background-color: var(--field-background); /* Un fondo ligeramente diferente */
+        border: 1px dashed var(--input-border);
+        border-radius: 8px;
+        padding: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 300px; /* Altura mínima */
+        position: relative; /* Para el botón de zoom */
+        overflow: hidden; /* Para controlar el zoom */
+    }
+    .original-image-area img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        cursor: zoom-in;
+        transition: transform 0.3s ease;
+    }
+
+
+.ocr-column .corrected-text-area-wrapper { /* Nuevo wrapper para aplicar estilos de fondo/borde */
+    border-radius: 8px;
+    padding: 2px; /* Pequeño padding para que el borde no pegue al textarea */
+    background-color: var(--field-background); /* Fondo por defecto */
+    border: 2px solid transparent; /* Borde transparente por defecto */
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+    flex-grow: 1; /* Para que ocupe espacio */
+    display: flex; /* Para que el textarea interior se expanda */
+}
+
+.ocr-column .corrected-text-area-wrapper.status-correct {
+    background-color: #e6ffed; /* Fondo verde claro */
+    border-color: var(--success-green); /* Borde verde */
+}
+
+.ocr-column .corrected-text-area-wrapper.status-corrected-saved {
+    background-color: #e7f3ff; /* Fondo azul claro */
+    border-color: var(--primary-blue); /* Borde azul */
+}
+
+.ocr-column .corrected-text-area-wrapper.status-editing {
+    background-color: var(--white); /* Fondo blanco mientras se edita */
+    border-color: var(--secondary-blue); /* Borde azul más brillante para indicar edición activa */
+}
+
+.ocr-column .corrected-text-area-wrapper textarea { /* Asegúrate que el textarea sea transparente */
+    background-color: transparent !important; 
+    height: 100%;
+    width: 100%;
+    border: none;
+    resize: none;
+    padding: 15px; /* Padding interno del textarea */
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.95em;
+    line-height: 1.6;
+}
+.ocr-column .corrected-text-area-wrapper.disabled textarea {
+    color: var(--text-secondary);
+    cursor: default; /* Cambiado de not-allowed a default */
+}
+
+
+/* Visibilidad de botones de acción si es necesario */
+.validation-buttons .btn-confirm-correction,
+.validation-buttons .btn-cancel-correction {
+    display: none; /* Ocultos por defecto */
+}
+
+.validation-buttons.editing .btn-correct, /* Ocultar "BIEN TRANSCRITO" */
+.validation-buttons.editing .btn-incorrect { /* Ocultar "MAL TRANSCRITO" */
+    display: none;
+}
+
+.validation-buttons.editing .btn-confirm-correction, /* Mostrar "Guardar Corrección" */
+.validation-buttons.editing .btn-cancel-correction { /* Mostrar "Cancelar" */
+    display: block; /* O inline-block/flex según tu layout */
+}
+    /* Columna OCR Análisis y Texto Correcto */
+    .ocr-text-area, .corrected-text-area {
+        flex-grow: 1;
+        font-family: 'Courier New', Courier, monospace; /* Fuente monoespaciada para código/texto */
+        font-size: 0.95em;
+        line-height: 1.6;
+        padding: 15px;
+        border-radius: 8px;
+        background-color: var(--field-background);
+        color: var(--text-primary);
+        white-space: pre-wrap; /* Conserva espacios y saltos de línea */
+        word-wrap: break-word;
+        min-height: 300px; /* Altura mínima */
+        overflow-y: auto; /* Scroll si el texto es muy largo */
+    }
+    .corrected-text-area textarea {
+        width: 100%;
+        height: 100%; /* Ocupa todo el espacio del div padre */
+        min-height: 280px; /* Ajusta según necesidad */
+        border: none;
+        padding: 0;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 1em; /* Hereda o iguala el tamaño */
+        line-height: 1.6;
+        background-color: transparent; /* Fondo transparente para que tome el del div */
+        resize: none; /* Evitar que el usuario redimensione */
+    }
+    .corrected-text-area textarea:focus {
+        outline: none;
+    }
+    .corrected-text-area.disabled textarea { /* Para cuando está deshabilitada */
+        background-color: #e9ecef; /* Un gris más claro */
+        color: var(--text-secondary);
+        cursor: not-allowed;
+    }
+
+    .validation-buttons {
+        margin-top: 20px;
+        display: flex;
+        flex-direction: column; /* Para poner los botones uno encima del otro */
+        gap: 10px;
+    }
+    .validation-buttons button {
+        width: 100%;
+        padding: 12px 15px;
+        font-size: 1em;
+        font-weight: 700;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+    }
+    .validation-buttons button:hover {
+        opacity: 0.85;
+    }
+    .btn-correct {
+        background-color: var(--success-green);
+        color: white;
+    }
+    .btn-incorrect {
+        background-color: var(--danger-red);
+        color: white;
+    }
+    .correction-note {
+        font-size: 0.8em;
+        color: var(--text-secondary);
+        margin-top: 15px;
+        line-height: 1.5;
+        text-align: justify;
+    }
+    .correction-note strong { color: var(--primary-blue); }
+
+    /* Botones de acción inferiores */
+    .page-actions {
+        width: 100%;
+        max-width: 1300px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid var(--input-border);
+    }
+    .page-actions .btn-page-action {
+        padding: 12px 30px;
+        font-size: 1.05em;
+        font-weight: 700;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    .btn-page-action.prev {
+        background-color: var(--light-gray);
+        color: var(--text-primary);
+    }
+    .btn-page-action.prev:hover { background-color: #b0b0b0; }
+
+    .btn-page-action.next {
+        background-color: var(--primary-blue);
+        color: white;
+    }
+    .btn-page-action.next:hover { background-color: #303dbb; }
+    .btn-page-action.next:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+    .validation-hint {
+        text-align: center;
+        font-size: 0.9em;
+        color: var(--danger-red);
+        margin-top: 15px;
+        display: none; /* Oculto por defecto */
+    }
+    .validation-hint.visible { display: block; }
+/* --- Estilos para la sección "Datos ejercicio" --- */
+    .datos-ejercicio-container {
+        background-color: var(--white);
+        padding: 30px 40px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        width: 100%;
+        max-width: 700px; /* O el ancho que desees */
+        margin-bottom: 40px; /* Espacio antes de la barra de progreso */
+    }
+    .datos-ejercicio-container h2 {
+        text-align: center;
+        font-size: clamp(20px, 3vw, 24px);
+        font-weight: 800;
+        margin-bottom: 30px;
+        color: var(--text-primary);
+    }
+    .dato-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--input-border);
+    }
+    .dato-item:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+    .dato-item .label {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 15px;
+        margin-right: 20px;
+        white-space: nowrap; /* Evita que el label se parta */
+    }
+    .dato-item .value {
+        font-weight: 700;
+        color: var(--text-primary);
+        background-color: #F0F0F0; /* Fondo gris claro para el valor */
+        padding: 10px 15px;
+        border-radius: 8px;
+        font-size: 16px;
+        text-align: left; /* Cambiado de right a left para mejor lectura */
+        flex-grow: 1; 
+    }
+    .enlarged-image-popup-area {
+    /* position: absolute; QUITAMOS ESTO */
+    /* top: 60px; QUITAMOS ESTO */
+    /* left: 50%; QUITAMOS ESTO */
+    /* transform: translateX(-50%); QUITAMOS ESTO */
+    
+    width: 90%; /* O el ancho que desees, se centrará si el padre es flex o con margin auto */
+    max-width: 800px; 
+    max-height: 70vh; 
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    /* z-index: 500; Ya no es tan crucial si está en el flujo, pero no hace daño */
+    border-radius: 8px;
+    /* display: none; Se maneja con JS, pero empezamos con él oculto */
+    display: flex; /* Para centrar la imagen y el botón de cerrar si es necesario */
+    flex-direction: column;
+    align-items: center;
+    margin: 20px auto; /* Margen superior e inferior, y auto para centrar horizontalmente si es un block-level element */
+    position: relative; /* Para que el botón de cerrar se posicione relativo a este div */
+}
+
+.enlarged-image-popup-area img#enlarged-image-content {
+    max-width: 100%;
+    max-height: calc(70vh - 60px); /* Ajustar para dejar espacio al padding y botón de cerrar */
+    object-fit: contain;
+    margin-bottom: 10px; 
+}
+
+.enlarged-image-popup-area .close-enlarged-btn {
+    position: absolute;
+    top: 5px;  /* Ajusta la posición del botón de cerrar dentro del popup */
+    right: 10px;
+    background: rgba(0,0,0,0.3);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 20px;
+    line-height: 30px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: bold;
+    z-index: 10; /* Para estar sobre la imagen si se superponen */
+}
+.enlarged-image-popup-area .close-enlarged-btn:hover {
+    background: rgba(0,0,0,0.6);
+}
+
+
+
+
+/* Modificación para el cursor de la imagen original */
+.original-image-area img {
+    cursor: pointer; /* O zoom-in si prefieres, para indicar que se puede ampliar */
+    /* Quita la transición de transform si la tenías para el zoom anterior */
+    transition: none; /* O elimina la línea de transition si estaba */
+}
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+    {# Barra de progreso (igual a ce_2_carga.html, asegúrate que el JS la actualice al paso 2) #}
+     <section class="page-title-section" style="text-align: center; padding: 0 0 20px 0; width:100%; max-width:900px;">
+        {# Este título es opcional si ya lo tienes en el bloque page_title de la base #}
+        {# Si base_ce.html YA tiene un bloque para el título principal, este h1 podría no ser necesario aquí #}
+        <h1 style="font-size: clamp(24px, 4vw, 30px); font-weight: 900; color: var(--text-primary);">
+            Sistema de Reconocimiento y Validación Automática
+        </h1>
+    </section>
+
+    <div class="datos-ejercicio-container">
+        <h2>Datos ejercicio</h2>
+        <div class="dato-item">
+            <span class="label">Nombre Ejercicio</span>
+            <span class="value">{{ ejercicio.nombre|default:"No proporcionado" }}</span>
+        </div>
+        <div class="dato-item">
+            <span class="label">Asignatura</span>
+            <span class="value">{{ ejercicio.asignatura|default:"No proporcionada" }}</span>
+        </div>
+        <div class="dato-item">
+            <span class="label">Convocatoria</span>
+            <span class="value">{{ ejercicio.convocatoria|default:"No proporcionada" }}</span>
+        </div>
+        <div class="dato-item">
+            <span class="label">Fecha examen</span>
+            <span class="value">{{ ejercicio.fecha_examen|date:"d/m/Y"|default:"No proporcionada" }}</span>
+        </div>
+    </div>
+    <section class="progress-section">
+        <h2>Corrección de Exámenes con IA</h2>
+        <div class="progress-bar-container">
+            <div class="progress-line" id="progress-line"></div> {# El JS debe ponerla al 50% para el paso 2 #}
+            <div class="progress-bar-steps">
+                <div class="progress-step completed" id="step-1"> {# Paso 1 completado #}
+                    <div class="circle">1</div><div class="label">Penalización Errores</div>
+                </div>
+                <div class="progress-step active" id="step-2"> {# Paso 2 activo #}
+                    <div class="circle">2</div><div class="label">Validación OCR</div>
+                </div>
+                <div class="progress-step" id="step-3">
+                    <div class="circle">3</div><div class="label">Corrección de errores</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="validation-ocr-container">
+        <div class="validation-ocr-header">
+            <h2>Validación OCR</h2>
+        </div>
+
+        <div class="image-navigation">
+            <span class="validations-remaining" id="validations-remaining-text">VALIDACIONES RESTANTES: X/Y</span>
+            <div class="nav-buttons">
+                <button id="prev-image-btn" title="Imagen Anterior"><i class="fas fa-arrow-left"></i></button>
+                <button id="next-image-btn" title="Siguiente Imagen"><i class="fas fa-arrow-right"></i></button>
+            </div>
+        </div>
+    <div id="enlarged-image-popup" class="enlarged-image-popup-area" style="display: none;">
+        <img id="enlarged-image-content" src="#" alt="Imagen Original Ampliada">
+        <button id="close-enlarged-image-btn" class="close-enlarged-btn">&times;</button>
+    </div>
+        <div class="ocr-validation-grid">
+    <div class="ocr-column">
+        <h3>Imagen Original</h3>
+        <div class="original-image-area">
+            <img id="original-image-display" src="{% static 'core/img/placeholder_ocr_image.png' %}" alt="Imagen Original del Examen">
+        </div>
+    </div>
+
+    <div class="ocr-column">
+        <h3>OCR Análisis</h3>
+        <div class="ocr-text-area" id="ocr-analysis-text">
+            {/* ... Texto OCR ... */}
+        </div>
+    </div>
+
+    <div class="ocr-column">
+        <h3>TEXTO CORRECTO</h3>
+        {# Nuevo wrapper para estilos de estado #}
+        <div class="corrected-text-area-wrapper" id="corrected-text-wrapper">
+            <textarea id="corrected-text-input" rows="10" disabled></textarea>
+        </div>
+        <div class="validation-buttons" id="validation-buttons-container">
+            {# Botones originales #}
+            <button class="btn-correct" id="btn-transcribed-correctly">BIEN TRANSCRITO</button>
+            <button class="btn-incorrect" id="btn-transcribed-incorrectly">MAL TRANSCRITO</button>
+            
+            {# Nuevos botones para el modo edición (inicialmente ocultos por CSS) #}
+            <button class="btn-correct btn-confirm-correction" id="btn-confirm-correction">Guardar Corrección</button>
+            <button class="btn-incorrect btn-cancel-correction" id="btn-cancel-correction">Cancelar</button>
+        </div>
+        </p>
+    </div>
+</div>
+
+    <div class="page-actions">
+        <button class="btn-page-action prev" id="btn-ocr-previous-page">
+            <i class="fas fa-arrow-left"></i> Anterior
+        </button>
+        <button class="btn-page-action next" id="btn-ocr-next-page" disabled>
+            Siguiente <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+    <p class="validation-hint" id="ocr-validation-hint">Debes validar todas las transcripciones antes de poder continuar.</p>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Selectores de Elementos ---
+    const progressLine = document.getElementById('progress-line');
+    // const step1Progress = document.getElementById('step-1'); // Ya no se necesita manipular directamente aquí
+    // const step2Progress = document.getElementById('step-2'); // Se manipula en updateProgressBarOCR
+    // const step3Progress = document.getElementById('step-3'); // Se manipula en updateProgressBarOCR
+
+    const validationsRemainingText = document.getElementById('validations-remaining-text');
+    const prevImageBtn = document.getElementById('prev-image-btn');
+    const nextImageBtn = document.getElementById('next-image-btn');
+
+    const ocrAnalysisText = document.getElementById('ocr-analysis-text');
+    const correctedTextWrapper = document.getElementById('corrected-text-wrapper');
+    const correctedTextInput = document.getElementById('corrected-text-input');
+    const validationButtonsContainer = document.getElementById('validation-buttons-container');
+
+    const btnTranscribedCorrectly = document.getElementById('btn-transcribed-correctly');
+    const btnTranscribedIncorrectly = document.getElementById('btn-transcribed-incorrectly');
+    const btnConfirmCorrection = document.getElementById('btn-confirm-correction');
+    const btnCancelCorrection = document.getElementById('btn-cancel-correction');
+
+    const btnOcrPreviousPage = document.getElementById('btn-ocr-previous-page');
+    const btnOcrNextPage = document.getElementById('btn-ocr-next-page');
+    const ocrValidationHint = document.getElementById('ocr-validation-hint');
+    const originalImageDisplay = document.getElementById('original-image-display');
+    const enlargedImagePopup = document.getElementById('enlarged-image-popup');
+    const enlargedImageContent = document.getElementById('enlarged-image-content');
+    const closeEnlargedImageBtn = document.getElementById('close-enlarged-image-btn');
+
+    // --- Datos de Ejemplo (Esto vendría del Backend) ---
+    const ocrValidations = [
+        {
+            id: 1,
+            imageUrl: "{% static 'core/img/placeholder_ocr_image.png' %}",
+            ocrText: "CREATE TABLE estudiantes (\n    id INT PRIMARY KEY AUTO_INCREMENT,\n    nombre VARCHAR(100) NOT NULL,\n    edad INT CHECK (edad >= 0),\n    correo VARCHAR(255) UNIQUE\n);",
+            correctedText: null,
+            status: 'pending' // pending, correct, editing, corrected_saved
+        },
+        {
+            id: 2,
+            imageUrl: "{% static 'core/img/placeholder_ocr_image_2.png' %}",
+            ocrText: "SELECT nombre, apellido\nFROM usaurios\nWHERE ciudad = 'Madrid';", // Error intencional
+            correctedText: null,
+            status: 'pending'
+        },
+        {
+            id: 3,
+            imageUrl: "{% static 'core/img/placeholder_ocr_image_3.png' %}",
+            ocrText: "INSERT INTO productos (id, nombre, precio)\nVALUES (1, 'Laptop', 1200.00);",
+            correctedText: null,
+            status: 'pending'
+        }
+    ];
+
+    let currentImageIndex = 0;
+    const totalImages = ocrValidations.length;
+
+    // --- Funciones ---
+    function updateProgressBarOCR() {
+        if (progressLine) progressLine.style.width = '50%';
+        document.getElementById('step-1')?.classList.add('completed');
+        document.getElementById('step-1')?.classList.remove('active');
+        document.getElementById('step-2')?.classList.add('active');
+        document.getElementById('step-2')?.classList.remove('completed');
+        document.getElementById('step-3')?.classList.remove('active', 'completed');
+    }
+
+    function setValidationInterfaceState(status) {
+        correctedTextWrapper.classList.remove('status-correct', 'status-corrected-saved', 'status-editing', 'disabled');
+        validationButtonsContainer.classList.remove('editing');
+
+        switch (status) {
+            case 'pending':
+                correctedTextInput.value = ocrValidations[currentImageIndex].ocrText;
+                correctedTextInput.disabled = true;
+                correctedTextWrapper.classList.add('disabled'); // Estilo por defecto/deshabilitado
+                break;
+            case 'correct':
+                correctedTextInput.value = ocrValidations[currentImageIndex].ocrText;
+                correctedTextInput.disabled = true;
+                correctedTextWrapper.classList.add('status-correct', 'disabled');
+                break;
+            case 'corrected_saved':
+                correctedTextInput.value = ocrValidations[currentImageIndex].correctedText || '';
+                correctedTextInput.disabled = true;
+                correctedTextWrapper.classList.add('status-corrected-saved', 'disabled');
+                break;
+            case 'editing':
+                // Al entrar en edición, el textarea toma el valor de ocrText o el correctedText si ya existía
+                correctedTextInput.value = ocrValidations[currentImageIndex].correctedText || ocrValidations[currentImageIndex].ocrText;
+                correctedTextInput.disabled = false;
+                correctedTextWrapper.classList.add('status-editing');
+                validationButtonsContainer.classList.add('editing');
+                correctedTextInput.focus();
+                break;
+        }
+    }
+
+    function loadValidationData(index) {
+        const data = ocrValidations[index];
+        if (!data) return;
+
+        originalImageDisplay.src = data.imageUrl;
+        ocrAnalysisText.textContent = data.ocrText;
+        
+        // Si el estado es 'editing' y navegamos, lo revertimos a 'pending' o al último estado guardado.
+        // Para esta simulación, si estaba 'editing', lo volvemos a 'pending' al cargar una nueva imagen.
+        // Una lógica más robusta preguntaría si guardar cambios.
+        if (data.status === 'editing' && index !== currentImageIndex) { // Si no es la imagen actual que se estaba editando
+             data.status = 'pending'; // O el último estado guardado
+        }
+        if (enlargedImagePopup && enlargedImagePopup.style.display === 'flex') { // O 'block' si usas ese display para mostrarlo
+            if (enlargedImageContent) { // Chequeo extra por si acaso
+                enlargedImageContent.src = data.imageUrl; // Actualiza la imagen del popup
+            }
+        }
+        currentImageIndex = index; // Actualizar el índice global
+        setValidationInterfaceState(data.status);
+
+        updateNavigation();
+        checkAllValidated();
+    }
+
+    function updateNavigation() {
+        const pendingCount = ocrValidations.filter(v => v.status === 'pending' || v.status === 'editing').length;
+        validationsRemainingText.textContent = `VALIDACIONES RESTANTES: ${pendingCount}/${totalImages} (Mostrando ${currentImageIndex + 1}/${totalImages})`;
+        prevImageBtn.disabled = currentImageIndex === 0;
+        nextImageBtn.disabled = currentImageIndex === totalImages - 1;
+    }
+
+    function checkAllValidated() {
+        const allDone = ocrValidations.every(v => v.status === 'correct' || v.status === 'corrected_saved');
+        btnOcrNextPage.disabled = !allDone;
+        ocrValidationHint.classList.toggle('visible', !allDone);
+    }
+
+    function goToNextImageOrFinish() {
+        if (currentImageIndex < totalImages - 1) {
+            currentImageIndex++;
+            loadValidationData(currentImageIndex);
+        } else {
+            loadValidationData(currentImageIndex); // Recargar la última para mostrar su estado final
+            alert("Todas las imágenes han sido procesadas para validación.");
+            // checkAllValidated() ya se llama en loadValidationData
+        }
+    }
+
+    // --- Event Listeners ---
+    if (originalImageDisplay && enlargedImagePopup && enlargedImageContent) {
+        originalImageDisplay.addEventListener('click', function() {
+            enlargedImageContent.src = this.src; // Poner la imagen clickeada en el popup
+            enlargedImagePopup.style.display = 'flex'; // Mostrar el popup
+            // Quita cualquier clase 'zoomed' si la usabas antes
+            // this.classList.remove('zoomed'); 
+        });
+    }
+
+    // Listener para el botón de CERRAR del popup
+    if (closeEnlargedImageBtn && enlargedImagePopup) {
+        closeEnlargedImageBtn.addEventListener('click', function() {
+            enlargedImagePopup.style.display = 'none'; // Ocultar el popup
+        });
+    }
+
+    // (Opcional) Listener para CERRAR el popup haciendo clic en la imagen ampliada misma
+    if (enlargedImageContent && enlargedImagePopup) {
+        enlargedImageContent.addEventListener('click', function() {
+            // Esto cerraría el popup al hacer clic en la imagen ampliada.
+            // Puedes omitir esto si solo quieres el botón X.
+            // enlargedImagePopup.style.display = 'none';
+        });
+    }
+    
+    // (Opcional) Listener para CERRAR el popup con la tecla 'Escape'
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "Escape" && enlargedImagePopup.style.display === 'flex') {
+            enlargedImagePopup.style.display = 'none';
+        }
+    });
+if (originalImageDisplay && enlargedImagePopup && enlargedImageContent) {
+    originalImageDisplay.addEventListener('click', function() {
+        enlargedImageContent.src = this.src;
+        enlargedImagePopup.style.display = 'flex'; // Mostrar el popup (empujará contenido)
+    });
+}
+
+// Listener para el botón de CERRAR del popup
+if (closeEnlargedImageBtn && enlargedImagePopup) {
+    closeEnlargedImageBtn.addEventListener('click', function() {
+        enlargedImagePopup.style.display = 'none'; // Ocultar el popup (contenido volverá a su sitio)
+    });
+}
+
+// (Opcional) Listener para CERRAR el popup con la tecla 'Escape'
+document.addEventListener('keydown', function(event) {
+    if (event.key === "Escape" && enlargedImagePopup.style.display === 'flex') { // O 'block' si cambiaste el display
+        enlargedImagePopup.style.display = 'none';
+    }
+});
+    if (originalImageDisplay) {
+        originalImageDisplay.addEventListener('click', function() {
+            this.classList.toggle('zoomed');
+        });
+    }
+
+    if (prevImageBtn) {
+        prevImageBtn.addEventListener('click', () => {
+            const currentData = ocrValidations[currentImageIndex];
+            if (currentData.status === 'editing') {
+                alert("Por favor, guarda o cancela tu corrección actual antes de navegar.");
+                return;
+            }
+            if (currentImageIndex > 0) {
+                currentImageIndex--;
+                loadValidationData(currentImageIndex);
+            }
+        });
+    }
+
+    if (nextImageBtn) {
+        nextImageBtn.addEventListener('click', () => {
+            const currentData = ocrValidations[currentImageIndex];
+            if (currentData.status === 'editing') {
+                alert("Por favor, guarda o cancela tu corrección actual antes de navegar.");
+                return;
+            }
+            if (currentImageIndex < totalImages - 1) {
+                currentImageIndex++;
+                loadValidationData(currentImageIndex);
+            }
+        });
+    }
+
+    if (btnTranscribedCorrectly) {
+        btnTranscribedCorrectly.addEventListener('click', () => {
+            const currentData = ocrValidations[currentImageIndex];
+            currentData.status = 'correct';
+            currentData.correctedText = currentData.ocrText;
+            // La llamada a setValidationInterfaceState ahora se hace en goToNextImageOrFinish via loadValidationData
+            console.log(`Imagen ${currentData.id}: Marcada como BIEN TRANSCRITA.`);
+            // SIMULACIÓN: Guardar en backend
+            // saveValidationToBackend(currentData.id, 'correct', currentData.ocrText);
+            goToNextImageOrFinish();
+        });
+    }
+
+    if (btnTranscribedIncorrectly) {
+        btnTranscribedIncorrectly.addEventListener('click', () => {
+            const currentData = ocrValidations[currentImageIndex];
+            currentData.status = 'editing';
+            setValidationInterfaceState('editing');
+            console.log(`Imagen ${currentData.id}: Marcada como MAL TRANSCRITA, habilitando edición.`);
+        });
+    }
+
+    if (btnConfirmCorrection) {
+        btnConfirmCorrection.addEventListener('click', () => {
+            const currentData = ocrValidations[currentImageIndex];
+            currentData.correctedText = correctedTextInput.value;
+            currentData.status = 'corrected_saved';
+            // La llamada a setValidationInterfaceState ahora se hace en goToNextImageOrFinish via loadValidationData
+            console.log(`Imagen ${currentData.id}: Corrección GUARDADA: "${currentData.correctedText}"`);
+            // SIMULACIÓN: Guardar en backend
+            // saveValidationToBackend(currentData.id, 'corrected_saved', currentData.correctedText);
+            goToNextImageOrFinish();
+        });
+    }
+
+    if (btnCancelCorrection) {
+        btnCancelCorrection.addEventListener('click', () => {
+            const currentData = ocrValidations[currentImageIndex];
+            currentData.status = 'pending'; 
+            // correctedText se queda como estaba antes de entrar en modo edición, o se limpia
+            // Si el ocrText es la fuente de verdad para 'pending', entonces:
+            currentData.correctedText = null; // Opcional, depende de tu lógica de datos
+            setValidationInterfaceState('pending');
+            console.log(`Imagen ${currentData.id}: Corrección CANCELADA.`);
+        });
+    }
+    
+    if (btnOcrPreviousPage) {
+        btnOcrPreviousPage.addEventListener('click', () => {
+            console.log("Guardando validaciones (simulación):", JSON.stringify(ocrValidations.map(v => ({id: v.id, status: v.status, text: v.correctedText || v.ocrText }))));
+            alert("Validaciones 'guardadas' (simulación). Volviendo a la página anterior...");
+            window.location.href = "{% url 'vista_mostrar_paso2_correccion' %}"; // Asegúrate que este nombre de URL sea el correcto
+        });
+    }
+
+    if (btnOcrNextPage) {
+        btnOcrNextPage.addEventListener('click', () => {
+            if (!btnOcrNextPage.disabled) {
+                console.log("Guardando TODAS las validaciones (simulación):", JSON.stringify(ocrValidations.map(v => ({id: v.id, status: v.status, text: v.correctedText || v.ocrText }))));
+                alert("Todas las validaciones completadas y 'guardadas' (simulación). Avanzando a la siguiente fase...");
+                
+                // Actualizar la barra de progreso al paso 3
+                document.getElementById('step-2')?.classList.remove('active');
+                document.getElementById('step-2')?.classList.add('completed');
+                document.getElementById('step-3')?.classList.add('active');
+                if(progressLine) progressLine.style.width = '100%';
+                
+                // Aquí redirigirías a la URL del paso 3 real si la tuvieras
+                window.location.href = "{% url 'vista_mostrar_paso4_final' %}";
+            }
+        });
+    }
+
+    // --- Inicialización ---
+    updateProgressBarOCR();
+    if (ocrValidations.length > 0) {
+        loadValidationData(currentImageIndex);
+    } else {
+        // Manejar caso sin imágenes para validar
+        validationsRemainingText.textContent = "No hay imágenes para validar.";
+        prevImageBtn.disabled = true;
+        nextImageBtn.disabled = true;
+        btnTranscribedCorrectly.disabled = true;
+        btnTranscribedIncorrectly.disabled = true;
+        btnConfirmCorrection.disabled = true;
+        btnCancelCorrection.disabled = true;
+        btnOcrNextPage.disabled = false; // O true si se requiere al menos una validación
+        ocrValidationHint.classList.remove('visible');
+    }
+});
+</script>
+{% endblock extra_js %}

@@ -1,0 +1,101 @@
+{% extends 'core/base_ce.html' %} {# Asegúrate que la ruta a tu base_ce.html sea correcta #}
+{% load static %}
+
+{% block title %}EVIS - Corrección Final de Errores{% endblock title %}
+
+{% block extra_css %}
+<style>
+    /* Puedes añadir estilos específicos para esta página aquí más adelante */
+    .placeholder-content {
+        text-align: center;
+        padding: 50px 20px;
+        font-size: 1.2em;
+        color: var(--text-secondary);
+    }
+</style>
+{% endblock extra_css %}
+
+{% block page_title %}Corrección Final de Errores{% endblock page_title %} {# Título principal de la página #}
+
+{% block content %}
+    {# Contenido específico de la pantalla de Corrección Final de Errores irá aquí #}
+    {# Por ahora, un mensaje de marcador de posición #}
+
+    {# Barra de progreso (debería mostrar el paso 3 como activo) #}
+    <section class="progress-section" style="width:100%; max-width:1200px;">
+        <h2>Corrección de Exámenes con IA</h2>
+        <div class="progress-bar-container">
+            <div class="progress-line" id="progress-line-step4"></div> {# ID único si es necesario, o usa el mismo y controla con JS #}
+            <div class="progress-bar-steps">
+                <div class="progress-step completed" id="step4-1"> {# Paso 1 completado #}
+                    <div class="circle">1</div><div class="label">Penalización Errores</div>
+                </div>
+                <div class="progress-step completed" id="step4-2"> {# Paso 2 completado #}
+                    <div class="circle">2</div><div class="label">Validación OCR</div>
+                </div>
+                <div class="progress-step active" id="step4-3"> {# Paso 3 activo #}
+                    <div class="circle">3</div><div class="label">Corrección de errores</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="placeholder-content">
+        <p>Contenido para la pantalla "Corrección Final de Errores" (Paso 3) se añadirá aquí.</p>
+        <p>De momento, esta página solo hereda el header y el footer.</p>
+    </div>
+
+    {# Botones de navegación de página (Anterior / Finalizar) #}
+    <div class="page-actions" style="width:100%; max-width:1200px; display:flex; justify-content:space-between; margin-top:40px;">
+        <button class="btn-page-action prev" id="btn-step4-previous-page">
+            <i class="fas fa-arrow-left"></i> Anterior (a Validación OCR)
+        </button>
+        <button class="btn-page-action next" id="btn-step4-finish-process">
+            Finalizar Proceso <i class="fas fa-check-circle"></i>
+        </button>
+    </div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Actualizar la barra de progreso para este paso (Paso 3 activo)
+    const progressLine = document.getElementById('progress-line-step4'); // Asegúrate que este ID exista o usa el ID genérico
+    const step1 = document.getElementById('step4-1');
+    const step2 = document.getElementById('step4-2');
+    const step3 = document.getElementById('step4-3');
+
+    if (progressLine) {
+        progressLine.style.width = '100%'; // Paso 3 es el 100% de la línea
+    }
+    if (step1) step1.classList.add('completed');
+    if (step1) step1.classList.remove('active');
+    if (step2) step2.classList.add('completed');
+    if (step2) step2.classList.remove('active');
+    if (step3) step3.classList.add('active');
+    if (step3) step3.classList.remove('completed'); // Por si acaso
+
+    const btnPrevious = document.getElementById('btn-step4-previous-page');
+    const btnFinish = document.getElementById('btn-step4-finish-process');
+
+    if (btnPrevious) {
+        btnPrevious.addEventListener('click', function() {
+            // Redirigir a la pantalla de Validación OCR
+            // Asegúrate de que 'vista_mostrar_paso3_ocr' es el nombre correcto de tu URL
+            window.location.href = "{% url 'vista_mostrar_paso3_ocr' %}";
+        });
+    }
+
+    if (btnFinish) {
+        btnFinish.addEventListener('click', function() {
+            // Lógica para finalizar el proceso
+            alert("Proceso de corrección finalizado (Simulación). Redirigiendo al menú principal...");
+            // Aquí podrías, por ejemplo, redirigir al menú principal
+            // window.location.href = "{% url 'eleccion_menu' %}";
+        });
+    }
+
+});
+</script>
+{% endblock extra_js %}

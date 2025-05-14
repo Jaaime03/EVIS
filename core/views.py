@@ -135,3 +135,31 @@ def mostrar_paso2_correccion_view(request):
         'errores_lista': errores_lista_placeholder,
     }
     return render(request, 'core/ce_2_carga.html', context)
+
+# En core/views.py
+@login_required
+def mostrar_paso3_validacion_ocr_view(request):
+    # Por ahora, no se necesita pasar datos específicos del ejercicio,
+    # ya que la plantilla usa datos de ejemplo en su JS.
+    # Cuando integres el backend, aquí cargarías los datos reales
+    # del ejercicio y sus imágenes/textos OCR.
+    context = {
+        'username': request.user.username,
+        'is_superuser': request.user.is_superuser,
+        # 'ejercicio': datos_del_ejercicio_actual, # Descomentar cuando tengas los datos
+    }
+    return render(request, 'core/ce_3_validacion_ocr.html', context)
+
+
+@login_required
+def mostrar_paso4_correccion_final_view(request):
+    # Por ahora, no se necesita pasar un contexto muy complejo,
+    # solo lo que necesite base_ce.html (username, is_superuser)
+    # y cualquier dato placeholder que quieras mostrar.
+    context = {
+        'username': request.user.username,
+        'is_superuser': request.user.is_superuser,
+        # Podrías pasar datos del ejercicio si los recuperas de la sesión o BD
+        # 'ejercicio': datos_del_ejercicio_actual, 
+    }
+    return render(request, 'core/ce_4_correccion_errores.html', context)

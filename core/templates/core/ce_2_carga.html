@@ -320,35 +320,16 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    if (nextStepBtn) {
+     if (nextStepBtn) {
         nextStepBtn.addEventListener('click', function() {
-            if (!this.disabled) {
-                currentProgressStep++;
-                const maxSteps = 3; // o el número de pasos que tengas
-                if (currentProgressStep > maxSteps) { 
-                    alert("Proceso completado (simulación)."); 
-                    currentProgressStep = maxSteps; 
-                } else { 
-                    alert(`SIMULACIÓN: Avanzando al paso ${currentProgressStep}.`); 
-                }
-                updateProgressBar(currentProgressStep);
-                
-                const errorTableSection = document.querySelector('.error-table-section');
+            if (!this.disabled) { // Solo actuar si el botón está habilitado
+            
+                console.log("Botón 'Siguiente' (desde Penalización Errores) pulsado.");
+                console.log("Redirigiendo a la pantalla de Validación OCR...");
 
-                if (currentProgressStep === 2) { 
-                    if(errorTableSection) errorTableSection.style.display = 'none'; 
-                    console.log("Simulación: Mostrar UI para Validación OCR");
-                    // Aquí podrías hacer visible otra sección si la tienes preparada
-                } else if (currentProgressStep === 3) { 
-                    if(errorTableSection) errorTableSection.style.display = 'none'; // Ocultar de nuevo si es necesario
-                    console.log("Simulación: Mostrar UI para Corrección de errores final");
-                }
+             window.location.href = "{% url 'vista_mostrar_paso3_ocr' %}";
                 
-                this.disabled = true; 
-                if(saveChangesBtn) {
-                    saveChangesBtn.disabled = false;
-                    saveChangesBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
-                }
+
             }
         });
     }
