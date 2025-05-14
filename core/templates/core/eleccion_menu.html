@@ -347,25 +347,31 @@
 
     <div class="content-frame">
               <!-- Contenedor de los botones de usuario -->
-      <div class="user-buttons">
-        {% if is_superuser %}
-        <a href="/admin">
-          <button class="user-button">Admin: {{ username }}</button>
+           <div class="user-buttons">
+        {% if user.is_superuser %}
+        <a href="{% url 'admin:index' %}">
+          <button class="user-button">Admin: {{ user.username }}</button>
         </a>
-      {% endif %}
-        <!-- Botón de cerrar sesión -->
-        <a href="{% url 'logout' %}">
-            <button class="logout-button">Cerrar sesión</button>
-          </a>
-    </div>
+        {% endif %}
+
+        {% if user.is_authenticated %}
+            <form method="post" action="{% url 'logout' %}" style="display: inline;"> {# Formulario POST #}
+                {% csrf_token %} {# Token CSRF obligatorio para POST #}
+                <button type="submit" class="logout-button">Cerrar sesión</button> {# Botón submit estilizado #}
+            </form>
+        {% endif %}
+      </div>
+
       <img src="{% static 'login/img/image-1-1.png' %}" class="app-logo" alt="Logo EVIS">
 
       
   <!-- Botones principales -->
   <div class="button-container">
-    <div class="button btn-corregir">
-      <div class="button-text">CORREGIR<br />EJERCICIO</div>
-    </div>
+    <a href="{% url 'corregir_ejercicios_lista' %}" class="button-link"> {# Enlace añadido #}
+      <div class="button btn-corregir">
+        <div class="button-text">CORREGIR<br />EJERCICIO</div>
+      </div>
+    </a>
     <div class="button btn-historial">
       <div class="button-text">HISTORIAL DE CORRECCIONES</div>
     </div>

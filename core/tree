@@ -19,11 +19,14 @@ core
 ├── models.py
 ├── serializers.py
 ├── static
-│   └── login
+│   └── core
 │       ├── globals.css
 │       ├── img
 │       │   ├── cir-1.png
 │       │   ├── cir-2.png
+│       │   ├── ic_1.png
+│       │   ├── ic_2.png
+│       │   ├── ic_3.png
 │       │   ├── image-1-1.png
 │       │   ├── image-1-2.png
 │       │   ├── image-1.png
@@ -31,11 +34,10 @@ core
 │       │   ├── rs-1.png
 │       │   ├── rs-2.png
 │       │   └── rs-3.png
-│       ├── style.css
 │       └── styleguide.css
 ├── templates
 │   └── core
-│       ├── base.html
+│       ├── ce_1_carga.html
 │       └── eleccion_menu.html
 ├── tests.py
 ├── tree
