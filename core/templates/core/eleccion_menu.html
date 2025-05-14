@@ -296,6 +296,23 @@
       margin-top: 12px;
     }
 
+/* Para los enlaces que envuelven los botones principales */
+.button-link {
+    text-decoration: none; /* Elimina el subrayado del enlace contenedor */
+    display: inline-block; /* Para que el 'a' tome las dimensiones del div.button */
+}
+.button-link:hover, .button-link:focus, .button-link:active {
+    text-decoration: none; /* También en otros estados */
+}
+
+/* Si el botón de Admin tiene un enlace y quieres quitarle el subrayado */
+.user-buttons a {
+    text-decoration: none; /* Quita el subrayado del enlace del botón Admin */
+}
+.user-buttons a:hover, .user-buttons a:focus {
+    text-decoration: none; /* También en otros estados */
+}
+
     .user-buttons {
   display: flex;
   justify-content: flex-end; /* Alinea los botones a la derecha */
@@ -372,9 +389,11 @@
         <div class="button-text">CORREGIR<br />EJERCICIO</div>
       </div>
     </a>
+    <a href="{% url 'vista_historial_correcciones' %}" class="button-link"> {# Enlace añadido #}
     <div class="button btn-historial">
       <div class="button-text">HISTORIAL DE CORRECCIONES</div>
     </div>
+  </a>
   </div>
 
   <!-- Sección inferior decorativa -->

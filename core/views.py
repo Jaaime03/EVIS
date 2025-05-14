@@ -163,3 +163,22 @@ def mostrar_paso4_correccion_final_view(request):
         # 'ejercicio': datos_del_ejercicio_actual, 
     }
     return render(request, 'core/ce_4_correccion_errores.html', context)
+
+@login_required # Opcional, pero recomendable si es información sensible
+def mostrar_historial_correcciones_view(request):
+    """
+    Muestra la página de Historial de Correcciones (ce_5_historial_correcciones.html).
+    Por ahora, no pasará datos de historial a la plantilla, ya que la tabla
+    se llenará inicialmente con un mensaje o datos de ejemplo desde JavaScript.
+    En el futuro, esta vista podría recuperar y pasar datos filtrados.
+    """
+    context = {
+        'username': request.user.username,
+        'is_superuser': request.user.is_superuser,
+        # Aquí podrías pasar listas para poblar los <select> de los filtros si los tuvieras,
+        # por ejemplo, todas las asignaturas únicas, convocatorias, etc.
+        # 'lista_todas_asignaturas': Asignatura.objects.values_list('nombre', flat=True).distinct(),
+        # 'lista_todas_convocatorias': Examen.objects.values_list('convocatoria', flat=True).distinct(),
+    }
+    # Asegúrate que la ruta 'core/ce_5_historial_correcciones.html' sea correcta
+    return render(request, 'core/ce_5_historial_correcciones.html', context)

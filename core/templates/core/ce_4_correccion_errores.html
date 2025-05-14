@@ -209,12 +209,88 @@
     line-height: 1.4; /* Ajusta para que la altura de línea sea consistente */
 }
 
+/* --- Estilos para la sección "Datos ejercicio" --- */
+    .datos-ejercicio-container {
+        background-color: var(--white);
+        padding: 30px 40px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        width: 100%;
+        max-width: 700px; /* O el ancho que desees */
+        margin-bottom: 40px; /* Espacio antes de la barra de progreso */
+    }
+    .datos-ejercicio-container h2 {
+        text-align: center;
+        font-size: clamp(20px, 3vw, 24px);
+        font-weight: 800;
+        margin-bottom: 30px;
+        color: var(--text-primary);
+    }
+    .dato-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--input-border);
+    }
+    .dato-item:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+    .dato-item .label {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 15px;
+        margin-right: 20px;
+        white-space: nowrap; /* Evita que el label se parta */
+    }
+    .dato-item .value {
+        font-weight: 700;
+        color: var(--text-primary);
+        background-color: #F0F0F0; /* Fondo gris claro para el valor */
+        padding: 10px 15px;
+        border-radius: 8px;
+        font-size: 16px;
+        text-align: left; /* Cambiado de right a left para mejor lectura */
+        flex-grow: 1; 
+    }
+
 </style>
 {% endblock extra_css %}
 
 {% block page_title %}Corrección de Errores{% endblock page_title %}
 
 {% block content %}
+   {# Barra de progreso (igual a ce_2_carga.html, asegúrate que el JS la actualice al paso 2) #}
+     <section class="page-title-section" style="text-align: center; padding: 0 0 20px 0; width:100%; max-width:900px;">
+        {# Este título es opcional si ya lo tienes en el bloque page_title de la base #}
+        {# Si base_ce.html YA tiene un bloque para el título principal, este h1 podría no ser necesario aquí #}
+        <h1 style="font-size: clamp(24px, 4vw, 30px); font-weight: 900; color: var(--text-primary);">
+            Sistema de Reconocimiento y Validación Automática
+        </h1>
+    </section>
+
+    <div class="datos-ejercicio-container">
+        <h2>Datos ejercicio</h2>
+        <div class="dato-item">
+            <span class="label">Nombre Ejercicio</span>
+            <span class="value">{{ ejercicio.nombre|default:"No proporcionado" }}</span>
+        </div>
+        <div class="dato-item">
+            <span class="label">Asignatura</span>
+            <span class="value">{{ ejercicio.asignatura|default:"No proporcionada" }}</span>
+        </div>
+        <div class="dato-item">
+            <span class="label">Convocatoria</span>
+            <span class="value">{{ ejercicio.convocatoria|default:"No proporcionada" }}</span>
+        </div>
+        <div class="dato-item">
+            <span class="label">Fecha examen</span>
+            <span class="value">{{ ejercicio.fecha_examen|date:"d/m/Y"|default:"No proporcionada" }}</span>
+        </div>
+    </div>
     <section class="progress-section">
         <h2>Corrección de Exámenes con IA</h2>
         <div class="progress-bar-container">

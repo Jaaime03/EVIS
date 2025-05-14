@@ -12,5 +12,6 @@ urlpatterns = [
     path('corregir-ejercicio/paso2/', views.mostrar_paso2_correccion_view, name='vista_mostrar_paso2_correccion'),
     path('corregir-ejercicio/paso3-ocr/', views.mostrar_paso3_validacion_ocr_view, name='vista_mostrar_paso3_ocr'),
     path('corregir-ejercicio/paso4-final/', views.mostrar_paso4_correccion_final_view, name='vista_mostrar_paso4_final'),
+    path('historial-correcciones/', views.mostrar_historial_correcciones_view, name='vista_historial_correcciones'),
 
 ]
