@@ -1,101 +1,713 @@
-{% extends 'core/base_ce.html' %} {# Asegúrate que la ruta a tu base_ce.html sea correcta #}
+{% extends 'core/base_ce.html' %}
 {% load static %}
 
-{% block title %}EVIS - Corrección Final de Errores{% endblock title %}
+{% block title %}EVIS - Corrección de Errores{% endblock title %}
 
 {% block extra_css %}
 <style>
-    /* Puedes añadir estilos específicos para esta página aquí más adelante */
-    .placeholder-content {
-        text-align: center;
-        padding: 50px 20px;
-        font-size: 1.2em;
-        color: var(--text-secondary);
+    /* --- ESTILOS ESPECÍFICOS PARA ce_4_correccion_errores.html --- */
+    /* Estilos de Progreso (pueden ser los mismos de pantallas anteriores) */
+    .progress-section { width: 100%; max-width: 1200px; margin-bottom: 30px; padding: 25px; background-color: var(--white); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .progress-section h2 { text-align: center; font-size: clamp(20px, 3vw, 26px); font-weight: 800; margin-bottom: 25px; color: var(--text-primary); }
+    .progress-bar-container { position: relative; height: 6px; background-color: #e0e0e0; border-radius: 3px; margin: 45px 0; }
+    .progress-bar-steps { display: flex; justify-content: space-between; position: absolute; width: 100%; top: 50%; transform: translateY(-50%); padding: 0 5px; }
+    .progress-step { display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; }
+    .progress-step .circle { width: 40px; height: 40px; border-radius: 50%; background-color: var(--white); border: 3px solid #cccccc; display: flex; justify-content: center; align-items: center; font-weight: bold; color: var(--text-secondary); margin-bottom: 8px; z-index: 1; transition: background-color 0.3s, border-color 0.3s, color 0.3s; }
+    .progress-step .label { font-size: 0.9em; color: var(--text-secondary); font-weight: 600; margin-top: 5px; width: 120px; }
+    .progress-step.active .circle { border-color: var(--primary-blue); background-color: var(--primary-blue); color: var(--white); }
+    .progress-step.completed .circle { border-color: var(--success-green); background-color: var(--success-green); color: var(--white); }
+    .progress-step.active .label, .progress-step.completed .label { color: var(--text-primary); }
+    .progress-line { position: absolute; height: 100%; background-color: var(--primary-blue); border-radius: 3px; left: 0; width: 0%; z-index: 0; transition: width 0.5s ease-out; }
+
+    /* Contenedor Principal de esta pantalla */
+    .correction-errors-container {
+        width: 100%;
+        max-width: 1300px;
+        margin-bottom: 30px;
     }
+
+    /* Navegación de Alumno */
+    .student-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        padding: 15px 20px;
+        background-color: var(--white);
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .student-selector-group { display: flex; align-items: center; gap: 10px; }
+    .student-selector-group label { font-weight: 600; color: var(--text-secondary); }
+    .student-selector-group select {
+        padding: 8px 12px; border-radius: 5px; border: 1px solid var(--input-border);
+        background-color: var(--white); font-family: 'Nunito Sans', sans-serif; font-size: 1em; min-width: 150px;
+    }
+    .student-navigation .corrections-remaining { font-size: 1em; font-weight: 600; color: var(--text-secondary); }
+    .student-navigation .nav-buttons button {
+        background-color: var(--secondary-blue); color: white; border: none;
+        padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 1.2em; margin-left: 10px;
+    }
+    .student-navigation .nav-buttons button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+    /* Display del Trabajo del Alumno (Texto Correcto e Imagen) */
+    .student-work-display {
+        display: grid; grid-template-columns: 1fr 1fr; /* Dos columnas */
+        gap: 25px; margin-bottom: 30px; align-items: stretch;
+    }
+    .student-work-column {
+        background-color: var(--white); padding: 20px; border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column;
+    }
+    .student-work-column h3 {
+        font-size: 1.1em; font-weight: 700; margin-bottom: 15px; color: var(--text-primary);
+        text-align: center; padding-bottom: 10px; border-bottom: 1px solid var(--input-border);
+    }
+    .corrected-text-display-area { /* Para el texto correcto maestro */
+        flex-grow: 1; padding: 15px; border-radius: 8px; background-color: var(--field-background);
+        min-height: 250px; overflow-y: auto; font-family: 'Courier New', Courier, monospace;
+        font-size: 0.95em; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;
+    }
+    .student-image-display-area { /* Para la imagen del alumno */
+        flex-grow: 1; padding: 10px; border-radius: 8px; background-color: var(--field-background);
+        min-height: 250px; display: flex; justify-content: center; align-items: center;
+    }
+    .student-image-display-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+    /* Sección y Tabla de Corrección de Errores */
+    .errors-correction-table-section {
+        background-color: var(--white); padding: 25px; border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 30px;
+        transition: background-color 0.3s ease, border 0.3s ease; /* Para feedback visual */
+    }
+    .errors-correction-table-section.correction-saved { /* Feedback visual de guardado */
+        border: 2px solid var(--success-green);
+        background-color: #f0fff4; /* Verde muy pálido */
+    }
+    .errors-correction-table-section h3 {
+        text-align: center; font-size: clamp(20px, 3vw, 22px); font-weight: 800;
+        margin-bottom: 20px; color: var(--text-primary);
+    }
+    .student-errors-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; text-align: left; }
+    .student-errors-table th, .student-errors-table td { padding: 10px 12px; vertical-align: middle; font-size: 0.9em; }
+    .student-errors-table thead th {
+        background-color: var(--background-gray); color: var(--text-primary); font-weight: 700;
+        font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .student-errors-table thead th:first-child { border-radius: 8px 0 0 8px; }
+    .student-errors-table thead th:last-child { border-radius: 0 8px 8px 0; }
+    .student-errors-table tbody tr { background-color: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .student-errors-table tbody td:first-child { border-radius: 8px 0 0 8px; }
+    .student-errors-table tbody td:last-child { border-radius: 0 8px 8px 0; }
+    .student-errors-table .col-err-desc { width: 40%; } /* Aumentado para descripción */
+    .student-errors-table .col-err-situation { width: 20%; text-align: center; } /* Aumentado para radios */
+    .student-errors-table .col-err-pen-llm, .student-errors-table .col-err-pen-human { width: 15%; text-align: center; }
+    .student-errors-table .col-err-situation label { margin: 0 5px; font-size:0.9em; cursor: pointer; white-space:nowrap; }
+    .student-errors-table .col-err-situation input[type="radio"] { margin-right: 3px; }
+    .student-errors-table .error-desc-display { /* Para descripción de error no editable */
+        padding: 8px 0; min-height: 24px; display: block; line-height: 1.4;
+    }
+    .student-errors-table .error-desc-input { /* Para input de descripción de error manual nuevo */
+        width: 100%; padding: 6px; border: 1px solid var(--input-border); border-radius: 4px;
+        font-family: 'Nunito Sans', sans-serif; font-size: 0.9em;
+    }
+    .student-errors-table tfoot td { font-weight: bold; background-color: var(--background-gray); }
+    .student-errors-table tfoot td:first-child { border-radius: 8px 0 0 8px; }
+    .student-errors-table tfoot td:last-child { border-radius: 0 8px 8px 0; }
+
+    .add-error-btn-container { text-align: left; margin-top: 15px; }
+    .btn-add-error {
+        background-color: var(--danger-red); color: white; padding: 10px 15px;
+        border: none; border-radius: 5px; font-weight: 600; cursor: pointer;
+        display: inline-flex; align-items: center; gap: 5px;
+    }
+
+    /* Resumen de Puntuaciones */
+    .scoring-summary {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 25px; margin-top: 30px; margin-bottom: 30px; align-items: stretch; /* Cambio para alinear cajas */
+    }
+    .score-box {
+        background-color: var(--white); padding: 20px; border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column;
+    }
+    .score-box h4 { font-size: 1em; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; font-weight:600;}
+    .score-box .score-value, .score-box input[type="number"] {
+        font-size: 1.8em; font-weight: 800; color: var(--primary-blue); margin-top: auto; /* Empuja valor hacia abajo */
+    }
+    .score-box input[type="number"] {
+        width: 120px; border: 1px solid var(--input-border); border-radius: 5px; padding: 8px 10px;
+        text-align: center; font-family: 'Nunito Sans', sans-serif; -moz-appearance: textfield;
+    }
+    .score-box input[type="number"]::-webkit-outer-spin-button,
+    .score-box input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .score-box .score-note { font-size: 0.8em; color: var(--text-secondary); margin-top:5px; }
+
+    /* Botones de Acción de Página Final */
+    .page-actions-final {
+        width: 100%; max-width: 1300px; display: flex; justify-content: space-between;
+        align-items: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--input-border);
+    }
+    .page-actions-final .btn-page-action {
+        padding: 12px 30px; font-size: 1.05em; font-weight: 700;
+        border-radius: 8px; border: none; cursor: pointer;
+        transition: background-color 0.2s ease; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-page-action.prev { background-color: var(--light-gray); color: var(--text-primary); }
+    .btn-page-action.prev:hover { background-color: #b0b0b0; }
+    .btn-page-action.download-csv,
+    .btn-page-action#btn-save-student-correction { /* Estilo común para botones de acción primarios */
+        background-color: var(--primary-blue); color: white;
+    }
+    .btn-page-action.download-csv:hover,
+    .btn-page-action#btn-save-student-correction:hover { background-color: #303dbb; }
+    .btn-page-action#btn-save-student-correction.saved {
+        background-color: var(--success-green);
+    }
+    .btn-page-action#btn-save-student-correction:disabled { /* Para cuando está guardado */
+        opacity: 0.7; cursor: not-allowed;
+    }
+    .student-errors-table th, .student-errors-table td {
+    padding: 10px 12px; /* Ajusta el padding si es necesario */
+    vertical-align: middle; /* Clave para alinear verticalmente */
+    font-size: 0.9em;
+}
+
+/* Estilo específico para las celdas de las columnas de penalización y alumnos */
+.student-errors-table .col-err-pen-llm, 
+.student-errors-table .col-err-pen-human-val, /* Usando la clase del <td> */
+.student-errors-table .col-alumnos { /* Si la columna de alumnos también debe estar centrada */
+    width: 15%; /* O el ancho que corresponda */
+    text-align: center; /* Centrar el contenido horizontalmente */
+}
+
+/* Si el header de Penalización Humana tiene una clase diferente, por ejemplo .col-err-pen-human */
+.student-errors-table th.col-err-pen-human {
+    width: 15%;
+    text-align: center;
+}
+/* Para asegurar que los radio buttons en "SITUACIÓN" no causen problemas de altura excesiva
+   o desalineación con otras celdas si sus labels son muy largos o se parten. */
+.student-errors-table .col-err-situation {
+    width: 20%;
+    text-align: center;
+    white-space: nowrap; /* Evita que los "SÍ NO" se partan en dos líneas si el espacio es justo */
+}
+.student-errors-table .col-err-situation label {
+    margin: 0 3px; /* Un poco menos de margen */
+    display: inline-flex; /* Para mejor alineación del radio y el texto */
+    align-items: center;
+}
+
+/* Para la descripción del error, si es muy larga, asegurar que no afecte la altura de manera extraña */
+.student-errors-table .col-err-desc {
+    width: 40%;
+    /* word-break: break-word; /* Si necesitas que palabras largas se partan */
+}
+.student-errors-table .error-desc-display {
+    padding: 8px 0;
+    line-height: 1.4; /* Ajusta para que la altura de línea sea consistente */
+}
+
 </style>
 {% endblock extra_css %}
 
-{% block page_title %}Corrección Final de Errores{% endblock page_title %} {# Título principal de la página #}
+{% block page_title %}Corrección de Errores{% endblock page_title %}
 
 {% block content %}
-    {# Contenido específico de la pantalla de Corrección Final de Errores irá aquí #}
-    {# Por ahora, un mensaje de marcador de posición #}
-
-    {# Barra de progreso (debería mostrar el paso 3 como activo) #}
-    <section class="progress-section" style="width:100%; max-width:1200px;">
+    <section class="progress-section">
         <h2>Corrección de Exámenes con IA</h2>
         <div class="progress-bar-container">
-            <div class="progress-line" id="progress-line-step4"></div> {# ID único si es necesario, o usa el mismo y controla con JS #}
+            <div class="progress-line" id="progress-line-final"></div>
             <div class="progress-bar-steps">
-                <div class="progress-step completed" id="step4-1"> {# Paso 1 completado #}
-                    <div class="circle">1</div><div class="label">Penalización Errores</div>
-                </div>
-                <div class="progress-step completed" id="step4-2"> {# Paso 2 completado #}
-                    <div class="circle">2</div><div class="label">Validación OCR</div>
-                </div>
-                <div class="progress-step active" id="step4-3"> {# Paso 3 activo #}
-                    <div class="circle">3</div><div class="label">Corrección de errores</div>
-                </div>
+                <div class="progress-step" id="final-step-1"><div class="circle">1</div><div class="label">Penalización Errores</div></div>
+                <div class="progress-step" id="final-step-2"><div class="circle">2</div><div class="label">Validación OCR</div></div>
+                <div class="progress-step" id="final-step-3"><div class="circle">3</div><div class="label">Corrección de errores</div></div>
             </div>
         </div>
     </section>
 
-    <div class="placeholder-content">
-        <p>Contenido para la pantalla "Corrección Final de Errores" (Paso 3) se añadirá aquí.</p>
-        <p>De momento, esta página solo hereda el header y el footer.</p>
+    <div class="correction-errors-container">
+        <div class="student-navigation">
+            <div class="student-selector-group">
+                <label for="student-selector">Nº Alumno</label>
+                <select id="student-selector">
+                    {# Las opciones se cargarán con JS #}
+                </select>
+            </div>
+            <span class="corrections-remaining" id="corrections-remaining-text">ALUMNO X/Y</span>
+            <div class="nav-buttons">
+                <button id="prev-student-btn" title="Alumno Anterior"><i class="fas fa-arrow-left"></i></button>
+                <button id="next-student-btn" title="Siguiente Alumno"><i class="fas fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <div class="student-work-display">
+            <div class="student-work-column">
+                <h3>TEXTO CORRECTO (Maestro)</h3>
+                <div class="corrected-text-display-area" id="master-corrected-text">
+                    Cargando texto maestro...
+                </div>
+            </div>
+            <div class="student-work-column">
+                <h3>Imagen Original Alumno</h3>
+                <div class="student-image-display-area">
+                    <img id="student-original-image" src="{% static 'core/img/placeholder_ocr_image.png' %}" alt="Imagen del Alumno">
+                </div>
+            </div>
+        </div>
+
+        <div class="errors-correction-table-section" id="errors-correction-section">
+            <h3>Corrección de Errores del Alumno</h3>
+            <table class="student-errors-table" id="student-errors-table">
+                <thead>
+                    <tr>
+                        <th class="col-err-desc">ERROR</th>
+                        <th class="col-err-situation">SITUACIÓN (SÍ/NO)</th>
+                        <th class="col-err-pen-llm">PENALIZACIÓN LLM</th>
+                        <th class="col-err-pen-human">PENALIZACIÓN HUMANA (FIJA)</th>
+                    </tr>
+                </thead>
+                <tbody id="student-errors-tbody">
+                    {# Las filas de errores se generan con JavaScript #}
+                    <tr><td colspan="4" style="text-align:center; padding:20px;">Seleccione un alumno para ver sus errores.</td></tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2" style="text-align: right; font-weight:bold;">SUMATORIO PENALIZACIONES (para Puntuación Combinada):</td>
+                        <td id="total-penalizacion-llm" style="text-align: center; font-weight:bold;">-</td>
+                        <td id="total-penalizacion-humana" style="text-align: center; font-weight:bold;">-</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="add-error-btn-container">
+                <button class="btn-add-error" id="btn-add-manual-error"><i class="fas fa-plus-circle"></i> Añadir error</button>
+            </div>
+        </div>
+
+        <div class="scoring-summary">
+            <div class="score-box">
+                <h4>PUNTUACIÓN PROFESOR</h4>
+                <input type="number" id="score-profesor-input" name="score_profesor" min="0" max="10" step="0.1" value="10.0">
+                <p class="score-note">Ingrese la puntuación sobre 10 puntos.</p>
+            </div>
+            <div class="score-box">
+                <h4>PUNTUACIÓN LLM (BASE)</h4>
+                <span class="score-value" id="score-llm-base">10.0</span>
+            </div>
+            <div class="score-box">
+                <h4>PUNTUACIÓN COMBINADA (CALCULADA)</h4>
+                 <span class="score-value" id="score-combined">10.0</span>
+            </div>
+        </div>
     </div>
 
-    {# Botones de navegación de página (Anterior / Finalizar) #}
-    <div class="page-actions" style="width:100%; max-width:1200px; display:flex; justify-content:space-between; margin-top:40px;">
-        <button class="btn-page-action prev" id="btn-step4-previous-page">
-            <i class="fas fa-arrow-left"></i> Anterior (a Validación OCR)
+    <div class="page-actions-final">
+        <button type="button" class="btn-page-action prev" id="btn-final-previous-page">
+            <i class="fas fa-arrow-left"></i> Anterior
         </button>
-        <button class="btn-page-action next" id="btn-step4-finish-process">
-            Finalizar Proceso <i class="fas fa-check-circle"></i>
+        <button type="button" class="btn-page-action" id="btn-save-student-correction">
+            <i class="fas fa-check"></i> Guardar Corrección Alumno
+        </button>
+        <button type="button" class="btn-page-action download-csv" id="btn-download-csv">
+            <i class="fas fa-download"></i> Descargar CSV (Todos)
         </button>
     </div>
 
 {% endblock content %}
-
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Actualizar la barra de progreso para este paso (Paso 3 activo)
-    const progressLine = document.getElementById('progress-line-step4'); // Asegúrate que este ID exista o usa el ID genérico
-    const step1 = document.getElementById('step4-1');
-    const step2 = document.getElementById('step4-2');
-    const step3 = document.getElementById('step4-3');
+    const MAX_SCORE = 10; // Puntuación máxima del ejercicio
 
-    if (progressLine) {
-        progressLine.style.width = '100%'; // Paso 3 es el 100% de la línea
+    // --- Selectores ---
+    const progressLine = document.getElementById('progress-line-final');
+    const studentSelector = document.getElementById('student-selector');
+    const correctionsRemainingText = document.getElementById('corrections-remaining-text');
+    const prevStudentBtn = document.getElementById('prev-student-btn');
+    const nextStudentBtn = document.getElementById('next-student-btn');
+    const masterCorrectedTextEl = document.getElementById('master-corrected-text');
+    const studentOriginalImageEl = document.getElementById('student-original-image');
+    const studentErrorsTbody = document.getElementById('student-errors-tbody');
+    const btnAddManualError = document.getElementById('btn-add-manual-error');
+    
+    const totalPenLlmFooterEl = document.getElementById('total-penalizacion-llm');
+    const totalPenHumanFooterEl = document.getElementById('total-penalizacion-humana');
+
+    const scoreProfesorInput = document.getElementById('score-profesor-input');
+    const scoreLlmBaseEl = document.getElementById('score-llm-base');
+    const scoreCombinedEl = document.getElementById('score-combined');
+    
+    const btnFinalPreviousPage = document.getElementById('btn-final-previous-page');
+    const btnDownloadCsv = document.getElementById('btn-download-csv');
+    const btnSaveStudentCorrection = document.getElementById('btn-save-student-correction');
+    const errorsCorrectionSection = document.getElementById('errors-correction-section'); // El div que se pondrá verde
+
+    // --- Datos de Ejemplo (Simulación del Backend) ---
+    const masterCorrectTextData = `CREATE TABLE IF NOT EXISTS Alumnos (\n  id INT PRIMARY KEY,\n  nombre VARCHAR(255) NOT NULL\n);`;
+
+    const predefinedHumanPenalties = {
+        "Error gramatical en CREATE (ej: CREAT)": -0.1,
+        "`INT ID` en vez de `ID INT`": -0.5,
+        "Olvidó UNIQUE en correo": -0.4,
+        "No definió PRIMARY KEY": -1.0,
+        "Usó `VARCHAR2` en lugar de `VARCHAR`": 0.0,
+        // Las penalizaciones para errores manuales se tomarán de 'pen_human_manual' en el error
+    };
+
+    const studentsData = { // Asegúrate que los IDs aquí sean strings si los usas como claves así
+        "312403MD": {
+            id_db: 1, // Un ID numérico si lo necesitas para el backend
+            displayId: "312403MD",
+            imageUrl: "{% static 'core/img/placeholder_ocr_image.png' %}",
+            errors: [ 
+                { error_id: "llm_err001", desc: "Error gramatical en CREATE (ej: CREAT)", situation: 'no', pen_llm: -0.2, type: 'llm' },
+                { error_id: "llm_err002", desc: "`INT ID` en vez de `ID INT`", situation: 'si', pen_llm: -0.3, type: 'llm' },
+                { error_id: "llm_err003", desc: "Olvidó UNIQUE en correo", situation: 'si', pen_llm: -0.5, type: 'llm' }
+            ],
+            score_profesor: 7.5, 
+            is_corrected: false 
+        },
+        "123456AB": {
+            id_db: 2,
+            displayId: "123456AB",
+            imageUrl: "{% static 'core/img/placeholder_ocr_image_2.png' %}",
+            errors: [
+                { error_id: "llm_err004", desc: "No definió PRIMARY KEY", situation: 'si', pen_llm: -1.0, type: 'llm' },
+                { error_id: "llm_err005", desc: "Usó `VARCHAR2` en lugar de `VARCHAR`", situation: 'no', pen_llm: -0.1, type: 'llm' }
+            ],
+            score_profesor: 9.0,
+            is_corrected: false 
+        }
+    };
+    const studentDisplayIds = Object.keys(studentsData); // ["312403MD", "123456AB"]
+    let currentStudentDisplayId = studentDisplayIds.length > 0 ? studentDisplayIds[0] : null;
+    let nextManualErrorInstanceId = 1; // Para IDs únicos de instancias de error manual
+
+    // --- Funciones ---
+    function updateProgressBarFinal() {
+        if (progressLine) progressLine.style.width = '100%';
+        document.getElementById('final-step-1')?.classList.add('completed');
+        document.getElementById('final-step-1')?.classList.remove('active');
+        document.getElementById('final-step-2')?.classList.add('completed');
+        document.getElementById('final-step-2')?.classList.remove('active');
+        document.getElementById('final-step-3')?.classList.add('active');
     }
-    if (step1) step1.classList.add('completed');
-    if (step1) step1.classList.remove('active');
-    if (step2) step2.classList.add('completed');
-    if (step2) step2.classList.remove('active');
-    if (step3) step3.classList.add('active');
-    if (step3) step3.classList.remove('completed'); // Por si acaso
 
-    const btnPrevious = document.getElementById('btn-step4-previous-page');
-    const btnFinish = document.getElementById('btn-step4-finish-process');
-
-    if (btnPrevious) {
-        btnPrevious.addEventListener('click', function() {
-            // Redirigir a la pantalla de Validación OCR
-            // Asegúrate de que 'vista_mostrar_paso3_ocr' es el nombre correcto de tu URL
-            window.location.href = "{% url 'vista_mostrar_paso3_ocr' %}";
+    function populateStudentSelector() {
+        if (!studentSelector) return;
+        studentSelector.innerHTML = '';
+        studentDisplayIds.forEach(displayId => {
+            const option = document.createElement('option');
+            option.value = displayId;
+            option.textContent = displayId;
+            if (displayId === currentStudentDisplayId) option.selected = true;
+            studentSelector.appendChild(option);
         });
     }
 
-    if (btnFinish) {
-        btnFinish.addEventListener('click', function() {
-            // Lógica para finalizar el proceso
-            alert("Proceso de corrección finalizado (Simulación). Redirigiendo al menú principal...");
-            // Aquí podrías, por ejemplo, redirigir al menú principal
-            // window.location.href = "{% url 'eleccion_menu' %}";
+    function renderErrorsForStudent(studentId) {
+        const student = studentsData[studentId];
+        if (!student || !studentErrorsTbody) return;
+
+        studentErrorsTbody.innerHTML = '';
+        student.errors.forEach(error => {
+            const row = document.createElement('tr');
+            // Usar un ID único para la instancia del error, no la descripción
+            row.dataset.errorInstanceId = error.error_id; 
+            
+            const penHumanForErrorType = error.type === 'manual' 
+                                       ? (error.pen_human_manual !== undefined ? error.pen_human_manual : 0.0) 
+                                       : (predefinedHumanPenalties[error.desc] !== undefined ? predefinedHumanPenalties[error.desc] : 0.0);
+
+            let descHtml = `<span class="error-desc-display">${error.desc}</span>`;
+            // Para errores manuales, la descripción no se edita aquí una vez añadida.
+            // La edición sería en un modal al crear o un botón "editar descripción".
+
+            row.innerHTML = `
+                <td>${descHtml}</td>
+                <td class="col-err-situation">
+                    <label><input type="radio" name="error_${error.error_id}_sit" value="si" ${error.situation === 'si' ? 'checked' : ''}> SÍ</label>
+                    <label><input type="radio" name="error_${error.error_id}_sit" value="no" ${error.situation === 'no' ? 'checked' : ''}> NO</label>
+                </td>
+                <td class="col-err-pen-llm">${error.pen_llm !== null && error.pen_llm !== undefined ? error.pen_llm.toFixed(1) : '-'}</td>
+                <td class="col-err-pen-human-val">${penHumanForErrorType.toFixed(1)}</td>
+            `;
+            studentErrorsTbody.appendChild(row);
+        });
+        addEventListenersToErrorRows();
+        calculateScoresAndTotals(studentId);
+        // El estado visual de 'guardado' se actualiza en loadStudentData y save.
+    }
+    
+    function addEventListenersToErrorRows() {
+        if (!studentErrorsTbody) return;
+        studentErrorsTbody.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', handleStudentDataChange);
         });
     }
 
+    function handleStudentDataChange() { // Se llama al cambiar radio buttons
+        const studentId = studentSelector.value;
+        const student = studentsData[studentId];
+        if (!student) return;
+
+        studentErrorsTbody.querySelectorAll('tr').forEach(row => {
+            const errorInstanceId = row.dataset.errorInstanceId;
+            const currentErrorInObject = student.errors.find(e => e.error_id === errorInstanceId);
+            if (currentErrorInObject) {
+                const radioChecked = row.querySelector(`input[type="radio"][name="error_${errorInstanceId}_sit"]:checked`);
+                if (radioChecked) {
+                    currentErrorInObject.situation = radioChecked.value;
+                }
+            }
+        });
+        calculateScoresAndTotals(studentId);
+        
+        if (student.is_corrected) { // Si estaba guardado y hay un cambio
+            student.is_corrected = false;
+            updateCorrectedStatusVisual(studentId);
+        }
+    }
+
+    function calculateScoresAndTotals(studentId) {
+        const student = studentsData[studentId];
+        if (!student || !scoreLlmBaseEl || !scoreCombinedEl || !totalPenLlmFooterEl || !totalPenHumanFooterEl) return;
+
+        let sumAllLlmPenaltiesForBaseScore = 0;
+        student.errors.forEach(error => {
+            if (error.type === 'llm' && typeof error.pen_llm === 'number') {
+                sumAllLlmPenaltiesForBaseScore += error.pen_llm;
+            }
+        });
+        student.calculated_score_llm_base = MAX_SCORE + sumAllLlmPenaltiesForBaseScore;
+        scoreLlmBaseEl.textContent = student.calculated_score_llm_base.toFixed(1);
+
+        let sumAppliedPenaltiesForCombined = 0;
+        let tfootSumLlmApplied = 0;
+        let tfootSumHumanApplied = 0;
+
+        student.errors.forEach(error => {
+            if (error.situation === 'si') {
+                const penLlm = (error.type === 'llm' && typeof error.pen_llm === 'number') ? error.pen_llm : 0;
+                const penHuman = error.type === 'manual' 
+                               ? (error.pen_human_manual !== undefined ? error.pen_human_manual : 0.0) 
+                               : (predefinedHumanPenalties[error.desc] !== undefined ? predefinedHumanPenalties[error.desc] : 0.0);
+                
+                const appliedPenalty = Math.abs(penLlm) >= Math.abs(penHuman) ? penLlm : penHuman;
+                sumAppliedPenaltiesForCombined += appliedPenalty;
+                
+                // Para el tfoot, mostrar la penalización que se aplicó realmente
+                if (appliedPenalty === penLlm) tfootSumLlmApplied += penLlm;
+                // Si penHuman fue la aplicada, o si penLlm no existe (manual) y penHuman sí
+                if (appliedPenalty === penHuman || (penLlm === 0 && penHuman !==0) ) tfootSumHumanApplied += penHuman;
+            }
+        });
+        student.calculated_score_combined = MAX_SCORE + sumAppliedPenaltiesForCombined;
+        scoreCombinedEl.textContent = student.calculated_score_combined.toFixed(1);
+
+        totalPenLlmFooterEl.textContent = tfootSumLlmApplied.toFixed(1);
+        totalPenHumanFooterEl.textContent = tfootSumHumanApplied.toFixed(1);
+    }
+    
+    function updateCorrectedStatusVisual(studentId) {
+        const student = studentsData[studentId];
+        if (!errorsCorrectionSection || !btnSaveStudentCorrection) return;
+
+        if (student && student.is_corrected) {
+            errorsCorrectionSection.classList.add('correction-saved');
+            btnSaveStudentCorrection.innerHTML = '<i class="fas fa-check-double"></i> Corrección Guardada';
+            btnSaveStudentCorrection.disabled = true;
+        } else {
+            errorsCorrectionSection.classList.remove('correction-saved');
+            btnSaveStudentCorrection.innerHTML = '<i class="fas fa-check"></i> Guardar Corrección Alumno';
+            btnSaveStudentCorrection.disabled = false;
+        }
+    }
+
+    function loadStudentData(studentId) {
+        currentStudentDisplayId = studentId; // Actualizar el ID global del alumno actual
+        const student = studentsData[studentId];
+        if (!student) {
+            console.error(`No se encontraron datos para el alumno: ${studentId}`);
+            studentErrorsTbody.innerHTML = '<tr><td colspan="4">No se encontraron datos para este alumno.</td></tr>';
+            return;
+        }
+        
+        // Actualizar índice global basado en el displayId
+        currentStudentIndex = studentDisplayIds.indexOf(studentId); 
+
+        if(studentSelector) studentSelector.value = studentId;
+        if(masterCorrectedTextEl) masterCorrectedTextEl.textContent = masterCorrectTextData;
+        if(studentOriginalImageEl) studentOriginalImageEl.src = student.imageUrl;
+        
+        renderErrorsForStudent(studentId); // Esto llama a calculateScoresAndTotals
+        
+        if(scoreProfesorInput) scoreProfesorInput.value = student.score_profesor.toFixed(1);
+        
+        if(correctionsRemainingText) correctionsRemainingText.textContent = `ALUMNO ${currentStudentIndex + 1}/${studentDisplayIds.length}`;
+        if(prevStudentBtn) prevStudentBtn.disabled = currentStudentIndex === 0;
+        if(nextStudentBtn) nextStudentBtn.disabled = currentStudentIndex === studentDisplayIds.length - 1;
+        
+        updateCorrectedStatusVisual(studentId); // Esencial para el feedback visual correcto
+    }
+
+    // --- Event Listeners ---
+    if (studentSelector) {
+        studentSelector.addEventListener('change', function() {
+            // Al cambiar de alumno, NO se guardan automáticamente los cambios del anterior.
+            // El profesor debe usar "Guardar Corrección Alumno" explícitamente.
+            loadStudentData(this.value);
+        });
+    }
+
+    if (prevStudentBtn) {
+        prevStudentBtn.addEventListener('click', () => {
+            if (currentStudentIndex > 0) {
+                loadStudentData(studentDisplayIds[currentStudentIndex - 1]);
+            }
+        });
+    }
+
+    if (nextStudentBtn) {
+        nextStudentBtn.addEventListener('click', () => {
+            if (currentStudentIndex < studentDisplayIds.length - 1) {
+                loadStudentData(studentDisplayIds[currentStudentIndex + 1]);
+            }
+        });
+    }
+
+    if (btnAddManualError) {
+        btnAddManualError.addEventListener('click', () => {
+            const studentId = studentSelector.value; // Usa el ID del selector
+            const student = studentsData[studentId];
+            if (!student) return;
+
+            const desc = prompt("Descripción del nuevo error:", "");
+            if (desc === null || desc.trim() === "") return;
+
+            const penHumanStr = prompt(`Penalización humana para "${desc}" (ej: -0.5):`, 
+                                     predefinedHumanPenalties["Nuevo error manual default"]?.toFixed(1) || "-0.2");
+            const penHumanManual = parseFloat(penHumanStr);
+            if (isNaN(penHumanManual)) {
+                alert("Penalización inválida. Debe ser un número.");
+                return;
+            }
+
+            const newErrorId = `man_${studentId}_${nextManualErrorInstanceId++}`;
+            const newError = { 
+                error_id: newErrorId, desc: desc.trim(), situation: 'si', 
+                pen_llm: null, 
+                pen_human_manual: penHumanManual, // Penalización para este error manual específico
+                type: 'manual' 
+            };
+            student.errors.push(newError);
+            // No es necesario añadir a predefinedHumanPenalties a menos que quieras que este nuevo tipo de error
+            // sea una opción global con penalización fija para otros alumnos, lo cual no parece ser el caso aquí.
+            
+            renderErrorsForStudent(studentId);
+            student.is_corrected = false; 
+            updateCorrectedStatusVisual(studentId);
+        });
+    }
+
+    if (scoreProfesorInput) {
+        scoreProfesorInput.addEventListener('input', function() {
+            const studentId = studentSelector.value; // Usa el ID del selector
+            const student = studentsData[studentId];
+            if(student && student.is_corrected) { // Solo si ya estaba guardado y se modifica
+                 student.is_corrected = false;
+                 updateCorrectedStatusVisual(studentId);
+            }
+            // La actualización del valor en studentsData.score_profesor se hará al "Guardar"
+        });
+    }
+    
+    if (btnSaveStudentCorrection) {
+        btnSaveStudentCorrection.addEventListener('click', () => {
+            const studentId = studentSelector.value; // Usa el ID del selector
+            const student = studentsData[studentId];
+            if (!student) return;
+
+            // 1. Asegurar que 'situation' de los errores esté actualizado en el objeto JS
+            studentErrorsTbody.querySelectorAll('tr').forEach(row => {
+                const errorInstanceId = row.dataset.errorInstanceId;
+                const errorInObject = student.errors.find(e => e.error_id === errorInstanceId);
+                if (errorInObject) {
+                    const radioChecked = row.querySelector(`input[type="radio"][name="error_${errorInstanceId}_sit"]:checked`);
+                    if (radioChecked) {
+                        errorInObject.situation = radioChecked.value;
+                    }
+                }
+            });
+            
+            // 2. Guardar la puntuación del profesor del input al objeto JS
+            student.score_profesor = parseFloat(scoreProfesorInput.value) || 0;
+            
+            // 3. Recalcular puntuaciones finales (por si algo cambió que no disparó handleStudentDataChange)
+            calculateScoresAndTotals(studentId); 
+            
+            // 4. Marcar como corregido y actualizar UI
+            student.is_corrected = true;
+            updateCorrectedStatusVisual(studentId);
+
+            console.log(`Corrección GUARDADA para alumno ${studentId}:`, JSON.parse(JSON.stringify(student)));
+            alert(`Corrección para el alumno ${studentId} guardada (simulación).`);
+            // En un futuro: Enviar `student` (o los datos relevantes) al backend aquí.
+        });
+    }
+
+    if (btnFinalPreviousPage) {
+        btnFinalPreviousPage.addEventListener('click', () => {
+            const student = studentsData[currentStudentDisplayId]; // Usa el ID actual
+            if (student && !student.is_corrected) {
+                if (!confirm("Hay cambios sin guardar para el alumno actual. ¿Desea continuar y descartarlos?")) {
+                    return; 
+                }
+            }
+            console.log("Volviendo a Validación OCR...");
+            window.location.href = "{% url 'vista_mostrar_paso3_ocr' %}"; // Asegúrate que este nombre de URL es el correcto
+        });
+    }
+
+    if (btnDownloadCsv) {
+        btnDownloadCsv.addEventListener('click', () => {
+            let allStudentsMarkedAsCorrected = studentDisplayIds.every(id => studentsData[id].is_corrected);
+            if (!allStudentsMarkedAsCorrected) {
+                if (!confirm("Algunos alumnos tienen correcciones pendientes de 'Guardar Corrección Alumno'. ¿Descargar CSV con los datos actuales (algunos podrían no estar guardados en el servidor)?")) {
+                    return;
+                }
+            }
+            // Antes de generar el CSV, asegurarse que los datos del alumno actual en pantalla estén en el objeto
+            const currentStudentIdForCsv = studentSelector.value;
+            const currentStudentObjForCsv = studentsData[currentStudentIdForCsv];
+            if(currentStudentObjForCsv){
+                currentStudentObjForCsv.score_profesor = parseFloat(scoreProfesorInput.value) || 0;
+                 studentErrorsTbody.querySelectorAll('tr').forEach(row => {
+                    const errorInstanceId = row.dataset.errorInstanceId;
+                    const errorInObject = currentStudentObjForCsv.errors.find(e => e.error_id === errorInstanceId);
+                    if (errorInObject) {
+                        const radioChecked = row.querySelector(`input[type="radio"][name="error_${errorInstanceId}_sit"]:checked`);
+                        if (radioChecked) errorInObject.situation = radioChecked.value;
+                    }
+                });
+                calculateScoresAndTotals(currentStudentIdForCsv); // recalcula por si acaso
+            }
+
+            console.log("Descargando CSV (simulación)... Datos a enviar:", JSON.stringify(studentsData));
+            alert("Funcionalidad de Descargar CSV pendiente de implementar en backend.");
+        });
+    }
+
+    // --- Inicialización ---
+    updateProgressBarFinal();
+    if (studentDisplayIds.length > 0) {
+        populateStudentSelector();
+        loadStudentData(currentStudentDisplayId); // Carga el primer alumno de la lista
+    } else {
+        if(correctionsRemainingText) correctionsRemainingText.textContent = "No hay alumnos para corregir.";
+        // Considera deshabilitar más controles aquí si no hay alumnos
+    }
 });
 </script>
 {% endblock extra_js %}
