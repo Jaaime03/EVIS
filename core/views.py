@@ -20,6 +20,7 @@ from rest_framework.viewsets import ModelViewSet
 from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.http import HttpResponseRedirect
 
 from core.models import EnunciadoEjercicio, Examen
 
@@ -61,7 +62,8 @@ class SubirEjercicioView(APIView):
             convocatoria = request.data['convocatoria']
             fecha_realizacion = request.data['fecha_realizacion']
             nombre_ejercicio = request.data['nombre_ejercicio']
-            enunciado_ejerc = request.data['enunciado_ejerc']
+            archivo_enunciado = request.FILES['enunciado_ejerc']
+            enunciado_ejerc = archivo_enunciado.read().decode('utf-8')
             estructura_tablas = request.FILES['estructura_tablas']
             puntuacion = request.data['puntuacion']
             archivo_zip = request.FILES['zip']
@@ -119,7 +121,7 @@ class SubirEjercicioView(APIView):
             # 9. Ejecutar corrección de errores — CAMBIO AQUÍ
             detectar_errores(transcripciones, enunciado)
 
-            return Response({'mensaje': 'Ejercicio creado y corregido correctamente'}, status=201)
+            return HttpResponseRedirect('/correccion-ejercicio-paso2/')
 
         except Exception as e:
             return Response({'error': str(e)}, status=400)
