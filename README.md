@@ -7,7 +7,7 @@ EVIS es una plataforma web que permite subir fotos de ejercicios, aplicar OCR y 
 
 - **Backend**: Django + Django REST Framework (Python)
 - **Base de datos**: SQLite (por defecto, se puede cambiar en "producción")
-- **Frontend**: HTML/CSS/JS (próximamente React o similar)
+- **Frontend**: HTML/CSS/JS 
 - **OCR + LLM**: Integración futura
 
 ---
