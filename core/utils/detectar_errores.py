@@ -81,7 +81,7 @@ def detectar_errores(transcripciones: dict, enunciado_obj: EnunciadoEjercicio) -
 
     content = response.choices[0].message.content
 
-    match = re.search(r"json\s*(.*?)\s*", content, re.DOTALL)
+    match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
     if match:
         json_bloque = match.group(1)
         try:
