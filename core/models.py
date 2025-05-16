@@ -14,7 +14,7 @@ class EnunciadoEjercicio(models.Model):
     id_enun_ejercicio = models.AutoField(primary_key=True)
     puntuacion_ejercicio = models.FloatField()
     enunciado_ejerc = models.TextField()
-    estructura_tablas = models.TextField()
+    estructura_tablas = models.ImageField(upload_to='estructura_tablas/', blank=True, null=True)
     nombre_ejercicio = models.CharField(max_length=255)
     examen = models.ForeignKey(Examen, on_delete=models.PROTECT, related_name='enunciados')
 

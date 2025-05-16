@@ -62,7 +62,7 @@ class SubirEjercicioView(APIView):
             fecha_realizacion = request.data['fecha_realizacion']
             nombre_ejercicio = request.data['nombre_ejercicio']
             enunciado_ejerc = request.data['enunciado_ejerc']
-            estructura_tablas = request.data['estructura_tablas']
+            estructura_tablas = request.FILES['estructura_tablas']
             puntuacion = request.data['puntuacion']
             archivo_zip = request.FILES['zip']
 
@@ -73,7 +73,7 @@ class SubirEjercicioView(APIView):
                 fecha_realizacion=fecha_realizacion
             )
 
-            # 3. Crear EnunciadoEjercicio
+            # 3. Crear EnunciadoEjercicio con imagen
             enunciado = EnunciadoEjercicio.objects.create(
                 nombre_ejercicio=nombre_ejercicio,
                 enunciado_ejerc=enunciado_ejerc,
@@ -110,14 +110,14 @@ class SubirEjercicioView(APIView):
                         )
                     except Alumno.DoesNotExist:
                         continue
-            
+
             os.remove(zip_absoluto)
 
             # 8. Ejecutar OCR
             transcripciones = procesar_ocr(carpeta_destino)
 
-            # 9. Ejecutar corrección de errores
-            detectar_errores(transcripciones, enunciado.enunciado_ejerc, enunciado.estructura_tablas)
+            # 9. Ejecutar corrección de errores — CAMBIO AQUÍ
+            detectar_errores(transcripciones, enunciado)
 
             return Response({'mensaje': 'Ejercicio creado y corregido correctamente'}, status=201)
 
