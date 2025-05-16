@@ -26,8 +26,8 @@ def detectar_errores(transcripciones: dict, enunciado: str, tablas:str) -> dict:
 
     prompt = (
         f"Eres un corrector automático de exámenes.\n"
-        f"A continuación tienes el enunciado de un ejercicio, la estructura de tablas correspondiente y las respuestas manuscritas transcritas de varios alumnos.\n\n"
-        f"Tu tarea es identificar errores comunes entre estas respuestas. Por cada error encontrado, proporciona:\n"
+        f"A continuación tienes el enunciado de un ejercicio, la estructura de tablas correspondiente y las respuestas de varios alumnos.\n\n"
+        f"Tu tarea es identificar errores posibles entre estas respuestas. Por cada error encontrado, proporciona:\n"
         f"  - una breve descripción,\n"
         f"  - una penalización sobre 10,\n"
         f"  - la lista de ID de los alumnos que han cometido ese error.\n\n"

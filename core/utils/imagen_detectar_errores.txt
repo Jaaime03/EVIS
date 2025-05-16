@@ -1,0 +1,224 @@
+##### models.py
+
+class EnunciadoEjercicio(models.Model):
+    id_enun_ejercicio = models.AutoField(primary_key=True)
+    puntuacion_ejercicio = models.FloatField()
+    enunciado_ejerc = models.TextField()
+    estructura_tablas = models.ImageField(upload_to='estructura_tablas/', blank=True, null=True)
+    nombre_ejercicio = models.CharField(max_length=255)
+    examen = models.ForeignKey(Examen, on_delete=models.PROTECT, related_name='enunciados')
+
+    def __str__(self):
+        return self.nombre_ejercicio
+
+
+
+##### utils/imagen_detectar_errores.py
+
+import json
+import os
+import re
+import base64
+from openai import AzureOpenAI
+from dotenv import load_dotenv
+import django
+from core.models import EjercicioAlumno, Error, AlumnoErrorEjercicio, Alumno, EnunciadoEjercicio
+
+# Cargar entorno y configurar Django
+load_dotenv()
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "evis_project.settings")
+django.setup()
+
+# Configuración Azure
+client = AzureOpenAI(
+    api_version="2024-12-01-preview",
+    azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+    api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
+)
+
+def codificar_imagen_base64(ruta_imagen):
+    with open(ruta_imagen, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode('utf-8')
+
+def detectar_errores(transcripciones: dict, enunciado_obj: EnunciadoEjercicio) -> dict:
+    respuestas = "\n".join(
+        f"{alumno_id}: {contenido['ejercicio'].strip()}"
+        for alumno_id, contenido in transcripciones.items()
+    )
+
+    # Codificar imagen base64 de estructura_tablas
+    if not enunciado_obj.estructura_tablas:
+        raise ValueError("El ejercicio no tiene imagen en estructura_tablas.")
+
+    imagen_path = enunciado_obj.estructura_tablas.path
+    imagen_base64 = codificar_imagen_base64(imagen_path)
+
+    # Construcción del prompt
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": (
+                        "Eres un corrector automático de exámenes.\n"
+                        "A continuación tienes el enunciado de un ejercicio, una imagen con la estructura de tablas correspondiente y las respuestas de varios alumnos.\n\n"
+                        "Tu tarea es identificar errores posibles entre estas respuestas. Por cada error encontrado, proporciona:\n"
+                        "- una breve descripción,\n"
+                        "- una penalización sobre 10,\n"
+                        "- la lista de ID de los alumnos que han cometido ese error.\n\n"
+                        f"Enunciado del ejercicio:\n{enunciado_obj.enunciado_ejerc}\n\n"
+                        f"Respuestas de los alumnos:\n{respuestas}\n\n"
+                        "Devuelve solo un JSON con esta estructura (usa números enteros como clave):\n"
+                        "{\n"
+                        "  \"1\": {\n"
+                        "    \"descripcion\": \"...\",\n"
+                        "    \"penalizacion_llm\": 0.5,\n"
+                        "    \"alumnos\": [\"123\", \"456\"]\n"
+                        "  },\n"
+                        "  ...\n"
+                        "}"
+                    )
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{imagen_base64}"
+                    }
+                }
+            ]
+        }
+    ]
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages,
+        max_tokens=4000
+    )
+
+    content = response.choices[0].message.content
+
+    match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
+    if match:
+        json_bloque = match.group(1)
+        try:
+            errores = json.loads(json_bloque)
+        except json.JSONDecodeError:
+            raise ValueError("Corrección: JSON generado no válido.")
+    else:
+        raise ValueError("Corrección: No se encontró un bloque JSON válido.")
+
+    # GUARDADO EN BASE DE DATOS
+    for id_error, contenido in errores.items():
+        descripcion = contenido.get("descripcion", "").strip()
+        penalizacion_llm = contenido.get("penalizacion_llm", 0)
+        alumnos_con_error = contenido.get("alumnos", [])
+
+        try:
+            error = Error.objects.create(
+                descripcion=descripcion,
+                penalizacion_llm=penalizacion_llm,
+                penalizacion_prof=penalizacion_llm
+            )
+
+            for alumno_id_str in alumnos_con_error:
+                try:
+                    alumno_id = int(alumno_id_str)
+                    alumno = Alumno.objects.get(id_alumno=alumno_id)
+                    ejercicios = EjercicioAlumno.objects.filter(alumno=alumno, enunciado=enunciado_obj).order_by('-id_ejercicio_alum')
+
+                    if not ejercicios.exists():
+                        print(f"No se encontraron ejercicios para el alumno {alumno_id}")
+                        continue
+
+                    ejercicio = ejercicios.first()
+                    AlumnoErrorEjercicio.objects.create(
+                        alumno=alumno,
+                        error=error,
+                        ejercicio_alumno=ejercicio,
+                        situacion='Correcto'  # por defecto
+                    )
+                    print(f"Error guardado para alumno {alumno_id} en ejercicio {ejercicio.id_ejercicio_alum}")
+
+                except Alumno.DoesNotExist:
+                    print(f"Alumno con ID {alumno_id_str} no encontrado.")
+                except Exception as e:
+                    print(f"Error al guardar error para {alumno_id_str}: {e}")
+
+        except Exception as e:
+            print(f"Error al guardar el error {id_error}: {e}")
+
+    return errores
+
+
+##### views.py
+class SubirEjercicioView(APIView):
+    def post(self, request):
+        try:
+            # 1. Recoger datos del formulario
+            asignatura = request.data['asignatura']
+            convocatoria = request.data['convocatoria']
+            fecha_realizacion = request.data['fecha_realizacion']
+            nombre_ejercicio = request.data['nombre_ejercicio']
+            enunciado_ejerc = request.data['enunciado_ejerc']
+            estructura_tablas = request.FILES['estructura_tablas']
+            puntuacion = request.data['puntuacion']
+            archivo_zip = request.FILES['zip']
+
+            # 2. Crear Examen
+            examen = Examen.objects.create(
+                asignatura=asignatura,
+                convocatoria=convocatoria,
+                fecha_realizacion=fecha_realizacion
+            )
+
+            # 3. Crear EnunciadoEjercicio con imagen
+            enunciado = EnunciadoEjercicio.objects.create(
+                nombre_ejercicio=nombre_ejercicio,
+                enunciado_ejerc=enunciado_ejerc,
+                estructura_tablas=estructura_tablas,  # <- YA ES IMAGEN
+                puntuacion_ejercicio=puntuacion,
+                examen=examen
+            )
+
+            # 4. Guardar ZIP temporalmente
+            zip_path = default_storage.save('tmp/fotos.zip', archivo_zip)
+            zip_absoluto = os.path.join(settings.MEDIA_ROOT, zip_path)
+
+            # 5. Crear carpeta destino
+            carpeta_destino = os.path.join(settings.MEDIA_ROOT, f'ejercicios/{enunciado.id_enun_ejercicio}')
+            os.makedirs(carpeta_destino, exist_ok=True)
+
+            # 6. Extraer ZIP
+            with zipfile.ZipFile(zip_absoluto, 'r') as zip_ref:
+                zip_ref.extractall(carpeta_destino)
+
+            # 7. Crear objetos EjercicioAlumno
+            for nombre_archivo in os.listdir(carpeta_destino):
+                if nombre_archivo.lower().endswith(('.jpg', '.jpeg', '.png')):
+                    alumno_id = os.path.splitext(nombre_archivo)[0]
+                    try:
+                        alumno = Alumno.objects.get(id_alumno=int(alumno_id))
+                        url_foto = f"ejercicios/{enunciado.id_enun_ejercicio}/{nombre_archivo}"
+
+                        EjercicioAlumno.objects.create(
+                            enunciado=enunciado,
+                            alumno=alumno,
+                            url_foto_ejerc=url_foto,
+                            estado='Pendiente'
+                        )
+                    except Alumno.DoesNotExist:
+                        continue
+
+            os.remove(zip_absoluto)
+
+            # 8. Ejecutar OCR
+            transcripciones = individual_procesar_ocr(carpeta_destino, enunciado)
+
+            # 9. Ejecutar corrección de errores — CAMBIO AQUÍ
+            detectar_errores(transcripciones, enunciado)
+
+            return Response({'mensaje': 'Ejercicio creado y corregido correctamente'}, status=201)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
