@@ -1,0 +1,335 @@
+{% extends 'core/base_ce.html' %}
+{% load static %}
+
+{% block title %}EVIS - Historial de Correcciones{% endblock title %}
+
+{% block extra_css %}
+<style>
+    /* --- ESTILOS ESPECÍFICOS PARA ce_5_historial_correcciones.html --- */
+    .history-container {
+        width: 100%;
+        max-width: 1400px; /* Puede ser más ancho para acomodar la tabla */
+        margin-bottom: 30px;
+    }
+
+    .history-header h2 {
+        text-align: center;
+        font-size: clamp(24px, 3.5vw, 30px);
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 30px;
+    }
+
+    /* Sección de Filtros */
+    .filters-section {
+        background-color: var(--white);
+        padding: 20px 25px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+    }
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Columnas adaptables */
+        gap: 20px;
+        align-items: flex-end; /* Alinear items al final para que el botón quede bien */
+    }
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    .filter-group label {
+        font-weight: 600;
+        font-size: 0.9em;
+        margin-bottom: 6px;
+        color: var(--text-secondary);
+    }
+    .filter-group input[type="text"],
+    .filter-group input[type="date"],
+    .filter-group select {
+        padding: 10px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--input-border);
+        background-color: var(--input-background);
+        font-family: 'Nunito Sans', sans-serif;
+        font-size: 0.95em;
+        width: 100%;
+    }
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline: none;
+        border-color: var(--primary-blue);
+    }
+    .filter-button-container {
+        /* Contenedor para el botón, puede necesitar ajustarse con el grid */
+        /* Si es el último item del grid, se alineará con los demás */
+    }
+    .btn-filter {
+        background-color: var(--primary-blue);
+        color: white;
+        border: none;
+        padding: 10px 25px; /* Padding ajustado */
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 1em;
+        width: 100%; /* Ocupa el espacio de su celda en el grid */
+        transition: background-color 0.2s ease;
+    }
+    .btn-filter:hover {
+        background-color: #303dbb;
+    }
+
+    /* Sección de la Tabla de Resultados */
+    .results-table-section {
+        background-color: var(--white);
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .results-table-wrapper {
+        width: 100%;
+        overflow-x: auto; /* Habilita el scroll horizontal */
+    }
+    .history-table {
+        width: 100%;
+        min-width: 1200px; /* Ancho mínimo para forzar scroll si es necesario */
+        border-collapse: collapse; /* O separate con border-spacing */
+        text-align: left;
+    }
+    .history-table th, .history-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--input-border);
+        font-size: 0.9em;
+        white-space: nowrap; /* Evita que el texto se parta, contribuye al scroll */
+    }
+    .history-table thead th {
+        background-color: var(--background-gray);
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: sticky; /* Para que los headers se queden fijos al hacer scroll vertical */
+        top: 0; /* Necesario para sticky */
+        z-index: 10;
+    }
+    .history-table tbody tr:hover {
+        background-color: #f9f9f9;
+    }
+    .history-table td.actions-cell { /* Para celdas con botones de acción como "Ver Detalle" */
+        text-align: center;
+    }
+    .btn-view-details {
+        background-color: var(--secondary-blue);
+        color: white;
+        padding: 6px 12px;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.85em;
+        cursor: pointer;
+    }
+    .title-section {
+    text-align: center; /* Centra el texto (h1 y p) */
+    margin-bottom: 30px; /* Espacio después de la sección del título */
+    max-width: 800px; /* Limita el ancho para mejor legibilidad en pantallas anchas */
+    margin-left: auto;   /* Para centrar el bloque .title-section si tiene max-width */
+    margin-right: auto;  /* Para centrar el bloque .title-section si tiene max-width */
+}
+.title-section h1 { /* Estilos específicos para el h1 si los necesitas */
+    font-size: clamp(24px, 3.5vw, 30px); /* Ejemplo de tamaño adaptable */
+    font-weight: 900; /* O el que uses consistentemente */
+    margin-bottom: 10px;
+}
+.title-section p { /* Estilos específicos para el p si los necesitas */
+    font-size: clamp(14px, 2vw, 16px); /* Ejemplo de tamaño adaptable */
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+</style>
+{% endblock extra_css %}
+
+{% block page_title %}Historial de Correcciones{% endblock page_title %}
+
+{% block content %}
+    {# No necesitamos la barra de progreso de 3 pasos aquí, a menos que sea un sub-paso de otro flujo #}
+    {# Si es una página independiente, el título de página del bloque anterior es suficiente #}
+
+    <div class="history-container">
+  
+        <section class="title-section">
+            <h1>HISTORIAL DE CORRECCIONES</h1>
+            <p>
+                Aqui se muestran todas las correcciones que se han hecho con el sistema EVIS, puedes filtrarlas por convocatoria, asignatura, tipo de ejercicio, examen, fecha de realización del examen y alumno.
+            </p>
+        </section>
+
+        <section class="filters-section">
+            <form id="history-filters-form">
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="filter-asignatura">Asignatura</label>
+                        <input type="text" id="filter-asignatura" name="asignatura" placeholder="Ej: Bases de Datos">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-convocatoria">Convocatoria</label>
+                        <input type="text" id="filter-convocatoria" name="convocatoria" placeholder="Ej: Ordinaria">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-ejercicio">Ejercicio (Nombre)</label>
+                        <input type="text" id="filter-ejercicio" name="ejercicio" placeholder="Ej: Práctica SQL 1">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-examen">Examen (ID/Nombre)</label>
+                        <input type="text" id="filter-examen" name="examen" placeholder="Ej: Parcial 1">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-n_alumno">Nº Alumno</label>
+                        <input type="text" id="filter-n_alumno" name="n_alumno" placeholder="Ej: 312403MD">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-fecha_desde">Fecha Desde</label>
+                        <input type="date" id="filter-fecha_desde" name="fecha_desde">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-fecha_hasta">Fecha Hasta</label>
+                        <input type="date" id="filter-fecha_hasta" name="fecha_hasta">
+                    </div>
+                    <div class="filter-button-container">
+                        <button type="button" class="btn-filter" id="btn-apply-filters">
+                            <i class="fas fa-filter"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <section class="results-table-section">
+            <div class="results-table-wrapper">
+                <table class="history-table" id="history-results-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha Corrección</th>
+                            <th>Nº Alumno</th>
+                            <th>Asignatura</th>
+                            <th>Ejercicio</th>
+                            <th>Convocatoria</th>
+                            <th>Puntuación Profesor</th>
+                            <th>Puntuación LLM (Base)</th>
+                            <th>Puntuación Combinada</th>
+                            <th>Errores Totales (Sí)</th>
+                            <th>Tiempo Corrección (Prof.)</th> 
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-results-tbody">
+                        {# Las filas de resultados se cargarán con JS o vendrán del backend #}
+                        <tr>
+                            <td colspan="11" style="text-align:center; padding: 30px;">
+                                No hay datos para mostrar. Aplique filtros para buscar en el historial.
+                            </td>
+                        </tr>
+                        {# Ejemplo de fila de datos (para estructura) - ELIMINAR O COMENTAR LUEGO #}
+                        </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Selectores ---
+    const btnApplyFilters = document.getElementById('btn-apply-filters');
+    const historyResultsTbody = document.getElementById('history-results-tbody');
+    // ... más selectores para los campos de filtro si necesitas leerlos ...
+
+    // --- Funciones ---
+    function loadHistoryData(filters = {}) {
+        // En un futuro, esta función haría una llamada AJAX/Fetch al backend con los filtros
+        // y luego poblaría la tabla con los resultados.
+        console.log("Aplicando filtros (simulación):", filters);
+
+        // Simulación: Limpiar tabla y mostrar mensaje o datos de ejemplo
+        historyResultsTbody.innerHTML = ''; // Limpiar resultados anteriores
+
+        // Datos de ejemplo para mostrar que la tabla funciona
+        const exampleData = [
+            { id: 1, fecha: "14/05/2025 10:30", alumno: "312403MD", asignatura: "Bases de Datos", ejercicio: "Práctica SQL", convocatoria: "Ordinaria", scoreP: 7.5, scoreL: 8.3, scoreC: 7.9, errores: 3, tiempo: "15 min" },
+            { id: 2, fecha: "13/05/2025 16:15", alumno: "123456AB", asignatura: "Programación", ejercicio: "Examen Hilos", convocatoria: "Extra", scoreP: 9.0, scoreL: 8.5, scoreC: 8.8, errores: 1, tiempo: "10 min" },
+            { id: 3, fecha: "12/05/2025 09:00", alumno: "654321CD", asignatura: "Redes", ejercicio: "Práctica Subnetting", convocatoria: "Ordinaria", scoreP: 6.0, scoreL: 6.5, scoreC: 6.3, errores: 5, tiempo: "20 min" }
+        ];
+
+        if (Object.keys(filters).length > 0 && exampleData.length > 0) { // Solo mostrar si se aplicó algún filtro (simulación)
+            exampleData.forEach(item => {
+                const row = historyResultsTbody.insertRow();
+                row.innerHTML = `
+                    <td>${item.fecha}</td>
+                    <td>${item.alumno}</td>
+                    <td>${item.asignatura}</td>
+                    <td>${item.ejercicio}</td>
+                    <td>${item.convocatoria}</td>
+                    <td>${item.scoreP.toFixed(1)}</td>
+                    <td>${item.scoreL.toFixed(1)}</td>
+                    <td>${item.scoreC.toFixed(1)}</td>
+                    <td>${item.errores}</td>
+                    <td>${item.tiempo}</td>
+                    <td class="actions-cell">
+                        <button class="btn-view-details" data-id="${item.id}">Ver Detalle</button>
+                    </td>
+                `;
+            });
+        } else {
+            const row = historyResultsTbody.insertRow();
+            const cell = row.insertCell();
+            cell.colSpan = 11; // Número total de columnas
+            cell.style.textAlign = "center";
+            cell.style.padding = "30px";
+            cell.textContent = "No hay datos para mostrar o no se han aplicado filtros.";
+        }
+    }
+
+    // --- Event Listeners ---
+    if (btnApplyFilters) {
+        btnApplyFilters.addEventListener('click', function() {
+            const filters = {
+                asignatura: document.getElementById('filter-asignatura').value,
+                convocatoria: document.getElementById('filter-convocatoria').value,
+                ejercicio: document.getElementById('filter-ejercicio').value,
+                examen: document.getElementById('filter-examen').value,
+                n_alumno: document.getElementById('filter-n_alumno').value,
+                fecha_desde: document.getElementById('filter-fecha_desde').value,
+                fecha_hasta: document.getElementById('filter-fecha_hasta').value,
+            };
+            // Quitar filtros vacíos para no enviarlos (opcional)
+            for (const key in filters) {
+                if (filters[key] === "" || filters[key] === null) {
+                    delete filters[key];
+                }
+            }
+            loadHistoryData(filters);
+        });
+    }
+    
+    // Listener para botones "Ver Detalle" (delegación de eventos)
+    if (historyResultsTbody) {
+        historyResultsTbody.addEventListener('click', function(event) {
+            if (event.target && event.target.classList.contains('btn-view-details')) {
+                const recordId = event.target.dataset.id;
+                alert(`Simulación: Ver detalle del registro con ID: ${recordId}. Implementar navegación o modal.`);
+                // Aquí iría la lógica para mostrar el detalle, ej:
+            }
+        });
+    }
+
+
+    // --- Inicialización ---
+    // Cargar datos iniciales (o no, esperar a que el usuario filtre)
+    loadHistoryData(); // Carga la tabla con el mensaje inicial o todos los datos si no hay filtros
+
+});
+</script>
+{% endblock extra_js %}

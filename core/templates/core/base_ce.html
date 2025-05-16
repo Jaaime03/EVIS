@@ -1,0 +1,314 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EVIS - Sistema de Validación{% endblock title %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --background-gray: #F6F6F6;
+            --text-primary: #1D1D1D;
+            --text-secondary: rgba(0, 0, 0, 0.50);
+            --input-background: #FFF;
+            --input-border: #E0E0E0;
+            --primary-blue: #3E4FE0;
+            --secondary-blue: #0085F5;
+            --light-gray: #CACACA;
+            --white: #FFF;
+            --black: #1D1D1D;
+            --success-green: #28a745;
+            --danger-red: #dc3545;
+            --warning-orange: #ffc107;
+            --field-background: #F0F0F0; /* Añadido por si se usa en elementos de base o hijos */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--white);
+            font-family: 'Nunito Sans', sans-serif;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* --- Header Estilos --- */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 5%; /* Padding lateral consistente */
+            background-color: var(--white);
+            width: 100%;
+            position: relative; 
+            z-index: 10; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .header-logo img { height: 40px; } /* Para el logo de ce_1_carga.html */
+        .header-logo-base img { height: 40px; } /* Si tienes un logo específico para la base */
+        
+        .header-button { /* Para botones de navegación genéricos como "Inicio" en el header */
+            background: none; border: none; cursor: pointer; font-size: 16px; 
+            color: var(--text-primary); display: flex; align-items: center; gap: 8px; 
+            padding: 8px 12px; border-radius: 6px; transition: background-color 0.2s; text-decoration:none;
+        }
+        .header-button:hover { background-color: var(--background-gray); }
+        .header-button i { color: var(--secondary-blue); font-size: 18px; }
+        
+        .back-button { /* Específico para el botón de volver de ce_1_carga.html */
+            background: none; border: none; cursor: pointer;
+            font-size: 24px; color: var(--text-primary);
+        }
+        .back-button i { color: var(--secondary-blue); }
+
+        .header-right { display: flex; align-items: center; gap: 15px; }
+        .user-info { display: flex; align-items: center; gap: 10px; } /* Para el user info en ce_1_carga.html */
+        .user-info img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+        .user-info span { font-weight: 600; }
+
+        .user-avatar img { /* Para el avatar en la base_ce.html */
+            width: 36px; height: 36px; border-radius: 50%; 
+            object-fit: cover; border: 2px solid var(--secondary-blue);
+        }
+        .logout-button, .logout-button-header { /* Unificando .logout-button y .logout-button-header */
+            background-color: var(--secondary-blue); border: none; color: white; 
+            padding: 8px 15px; border-radius: 5px; cursor: pointer; 
+            font-weight: 700; font-size: 14px; transition: background 0.3s; 
+            text-decoration: none; display:flex; align-items:center; gap: 5px;
+        }
+        .logout-button:hover, .logout-button-header:hover { background-color: #006DC7; }
+        .header-nav-link { /* Para enlaces como "Contacto" en el header */
+            font-weight: 600; text-decoration: none; color: var(--text-primary);
+            padding: 8px 10px; border-radius: 4px;
+        }
+        .header-nav-link:hover { background-color: var(--background-gray); }
+
+
+        /* --- Sección Opcional de Título de Página (Blanca, debajo del header) --- */
+        .page-title-container { /* Nuevo contenedor para el título de página */
+            width: 100%;
+            padding: 25px 5%; /* Espacio arriba y abajo del título */
+            text-align: center;
+            background-color: var(--white); /* Fondo blanco para esta sección */
+            /* margin-bottom: 0; No necesita margen inferior si main-content-area gestiona su propio espacio superior */
+        }
+        .page-title-container h1 {
+            font-size: clamp(24px, 3.5vw, 30px);
+            font-weight: 900;
+            color: var(--text-primary);
+            margin: 0; /* Quitar margen por defecto del h1 */
+        }
+         .page-title-container p { /* Estilo para el párrafo de subtítulo opcional */
+            font-size: clamp(14px, 2vw, 16px);
+            color: var(--text-secondary);
+            line-height: 1.6;
+            max-width: 700px; 
+            margin: 10px auto 0 auto; /* Margen superior y centrado */
+        }
+
+
+        /* --- Main Content Area Estilos (el área gris) --- */
+        .main-content-area {
+            flex-grow: 1;
+            background-color: var(--background-gray);
+            padding: 40px 5%; /* Padding superior e inferior consistente DENTRO del área gris */
+            /* El margin-top: -44px se elimina para un flujo más simple si page-title-container existe. */
+            /* Si quieres el efecto de solapamiento con el app-header, puedes añadirlo de nuevo, */
+            /* pero page-title-container necesitaría estar DENTRO de main-content-area o después. */
+            /* Por ahora, para un espaciado claro: */
+            margin-top: 0; 
+            border-radius: 44px 44px 0 0; /* Mantenemos los bordes redondeados superiores */
+            position: relative;
+            z-index: 1; 
+            display: flex;
+            flex-direction: column;
+            align-items: center; 
+        }
+        
+        /* --- Footer Estilos --- */
+        .black-footer {
+            width: 100%; /* Ya debería hacer que ocupe todo el ancho */
+            background: var(--black);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 30px 5%; /* Padding reducido un poco */
+            z-index: 5; /* Por encima del contenido si hay solapamientos */
+            position: relative;
+            color: var(--light-gray);
+            margin-top: auto; /* Empuja el footer hacia abajo */
+        }
+        .footer-content {
+            max-width: 1200px;
+            width: 100%;
+            display: flex;
+            gap: 30px; /* Gap entre logo y grid reducido */
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .footer-logo-base img { width: 60px; height: 60px; flex-shrink: 0; align-self: center; } /* Logo más pequeño */
+        
+        .footer-grid {
+            display: flex;
+            gap: clamp(20px, 4vw, 40px); /* Gap entre columnas reducido */
+            justify-content: space-around; /* O space-between si prefieres */
+            flex-grow: 1;
+            flex-wrap: wrap;
+        }
+        .footer-col {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem; /* Gap entre título de columna y enlaces reducido */
+            min-width: 140px;
+        }
+        .footer-title {
+            color: var(--white);
+            font-size: 15px; /* Ligeramente más pequeño */
+            font-weight: 700;
+            margin-bottom: 0.4rem; /* Espacio bajo el título reducido */
+        }
+        .footer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 6px; /* Gap entre enlaces MUY reducido */
+        }
+        .footer-link {
+            color: var(--light-gray);
+            font-size: 14px; /* Ligeramente más pequeño */
+            font-weight: 400;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .footer-link:hover { color: var(--white); }
+
+        .social-links { display: flex; flex-direction: column; gap: 8px; } /* Gap reducido */
+        .social-link { display: flex; align-items: center; gap: 8px; text-decoration: none; transition: opacity 0.3s ease; }
+        .social-link:hover { opacity: 0.8; }
+        .social-link img { width: 18px; height: 18px; } /* Iconos sociales más pequeños */
+        .social-link span { color: var(--light-gray); font-size: 14px; font-weight: 400; }
+
+        /* --- Media Queries Unificadas --- */
+        @media (max-width: 768px) {
+            .app-header { padding: 15px 3%; }
+            .header-left { gap: 15px; }
+            .header-logo img, .header-logo-base img { height: 35px; }
+            .header-right { gap: 10px; }
+            .header-button { padding: 6px 8px; font-size: 15px; }
+            .header-button i { font-size: 16px; }
+            .user-info span { display: none; } /* Ocultar nombre de usuario junto al avatar */
+            .user-avatar img { width: 30px; height: 30px; }
+            .logout-button, .logout-button-header { padding: 6px 10px; font-size: 13px; }
+            
+            .page-title-container { padding: 20px 3%; }
+            .page-title-container h1 { font-size: clamp(20px, 5vw, 26px); }
+            .page-title-container p { font-size: clamp(13px, 3vw, 15px); }
+
+            .main-content-area { 
+                padding: 30px 3%; 
+                border-radius: 30px 30px 0 0;
+                /* Si no hay page-title-container y quieres el overlap con el header: */
+                /* margin-top: -30px;  */
+            }
+            
+            .footer-content { flex-direction: column; align-items: center; gap: 25px; }
+            .footer-grid { justify-content: center; text-align: center; gap: 20px; }
+            .footer-col { align-items: center; }
+            .black-footer { padding: 25px 3%; min-height: auto; }
+        }
+    </style>
+    {% block extra_css %}{% endblock extra_css %}
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-left">
+             {# Este es el header que pusiste en tu ce_1_carga.html, lo usaré como base #}
+             {# Asume que 'eleccion_menu' es tu URL principal/dashboard #}
+
+            <a href="{% url 'eleccion_menu' %}" class="header-logo"> {# O header-logo-base si es diferente #}
+                <img src="{% static 'login/img/image-1-1.png' %}" alt="Logo EVIS">
+            </a>
+        </div>
+        <div class="header-right">
+            {# Ejemplo de enlaces adicionales si los necesitas en todas las páginas #}
+            <div class="user-info"> {# Usando el user-info de tu ce_1_carga #}
+                 <img src="https://placehold.co/32x32/0085F5/FFF?text={{ request.user.username|first|upper|default:'U' }}" alt="Avatar de usuario">
+                <span>{{ request.user.username|default:"Usuario" }}</span>
+            </div>
+             {% if request.user.is_authenticated %}
+                <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-button">Cerrar sesión</button>
+                </form>
+             {% else %}
+                 <a href="{% url 'login' %}" class="logout-button"><i class="fas fa-sign-in-alt"></i> Iniciar Sesión</a>
+            {% endif %}
+        </div>
+    </header>
+
+    {# Sección para el título principal de la página, debajo del header #}
+    {% block page_title_section %}
+
+    {% endblock page_title_section %}
+
+    <main class="main-content-area">
+        {% block content %}
+        <p>Si ves esto, la plantilla hija no definió un bloque 'content' o está vacío.</p>
+        {% endblock content %}
+    </main>
+
+    <footer class="black-footer">
+      <div class="footer-content">
+        <div class="footer-logo-base">
+             <img src="{% static 'login/img/image-1-2.png' %}" alt="EVIS Logo Footer">
+        </div>
+        <div class="footer-grid">
+            <div class="footer-col">
+              <h3 class="footer-title">Universidad</h3>
+              <nav class="footer-links">
+                <a href="https://www.upm.es/UPM/Centros?id=CON00289&prefmt=centros&fmt=detail" class="footer-link" target="_blank" rel="noopener noreferrer">Sobre Nosotros</a>
+                <a href="#" class="footer-link">Contacto</a>
+                <a href="#" class="footer-link">FAQ</a>
+              </nav>
+            </div>
+            <div class="footer-col">
+              <h3 class="footer-title">Información Legal</h3>
+              <nav class="footer-links">
+                <a href="#" class="footer-link">Términos y Condiciones</a>
+                <a href="#" class="footer-link">Política de Privacidad</a>
+                <a href="#" class="footer-link">Política de Cookies</a>
+              </nav>
+            </div>
+            <div class="footer-col">
+              <h3 class="footer-title">Síguenos</h3>
+              <div class="social-links">
+                <a href="https://www.linkedin.com/school/universidad-politecnica-de-madrid/?originalSubdomain=es" target="_blank" rel="noopener noreferrer" class="social-link">
+                  <img src="{% static 'login/img/rs-1.png' %}" alt="LinkedIn">
+                  <span>LinkedIn</span>
+                </a>
+                <a href="https://www.facebook.com/ETSIINF/?locale=es_ES" target="_blank" rel="noopener noreferrer" class="social-link">
+                  <img src="{% static 'login/img/rs-2.png' %}" alt="Facebook">
+                  <span>Facebook</span>
+                </a>
+                <a href="https://x.com/ctbupm" target="_blank" rel="noopener noreferrer" class="social-link">
+                  <img src="{% static 'login/img/rs-3.png' %}" alt="X">
+                  <span>X</span>
+                </a>
+              </div>
+            </div>
+        </div>
+      </div>
+    </footer>
+
+    {% block extra_js %}{% endblock extra_js %}
+</body>
+</html>

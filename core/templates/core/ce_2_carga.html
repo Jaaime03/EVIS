@@ -1,0 +1,348 @@
+{% extends 'core/base_ce.html' %} {# Asegúrate que esta ruta sea correcta a tu base_ce.html #}
+{% load static %}
+
+{% block title %}EVIS - Corrección: {{ ejercicio.nombre|default:"Ejercicio" }}{% endblock title %}
+
+{% block extra_css %}
+<style>
+    /* --- ESTILOS ESPECÍFICOS DE ce_2_carga.html --- */
+    .exercise-info-bar { display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; background-color: var(--white); padding: 15px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; max-width: 1200px; margin-bottom: 30px; }
+    .info-item { display: flex; flex-direction: column; align-items: center; padding: 5px 15px; text-align: center; min-width: 180px; }
+    .info-item strong { font-size: 0.9em; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; }
+    .info-item span { font-size: 1.1em; font-weight: 700; color: var(--text-primary); }
+    
+    .progress-section { width: 100%; max-width: 1200px; margin-bottom: 30px; padding: 25px; background-color: var(--white); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .progress-section h2 { text-align: center; font-size: clamp(20px, 3vw, 26px); font-weight: 800; margin-bottom: 25px; color: var(--text-primary); }
+    
+    .progress-bar-container { position: relative; height: 6px; background-color: #e0e0e0; border-radius: 3px; margin: 45px 0; }
+    .progress-bar-steps { display: flex; justify-content: space-between; position: absolute; width: 100%; top: 50%; transform: translateY(-50%); padding: 0 5px; }
+    .progress-step { display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; }
+    .progress-step .circle { width: 40px; height: 40px; border-radius: 50%; background-color: var(--white); border: 3px solid #cccccc; display: flex; justify-content: center; align-items: center; font-weight: bold; color: var(--text-secondary); margin-bottom: 8px; z-index: 1; transition: background-color 0.3s, border-color 0.3s, color 0.3s; }
+    .progress-step .label { font-size: 0.9em; color: var(--text-secondary); font-weight: 600; margin-top: 5px; width: 120px; }
+    
+    .progress-step.active .circle { border-color: var(--primary-blue); background-color: var(--primary-blue); color: var(--white); }
+    .progress-step.completed .circle { border-color: var(--success-green); background-color: var(--success-green); color: var(--white); }
+    .progress-step.active .label, .progress-step.completed .label { color: var(--text-primary); }
+    .progress-line { position: absolute; height: 100%; background-color: var(--primary-blue); border-radius: 3px; left: 0; width: 0%; z-index: 0; transition: width 0.5s ease-out; }
+    
+    .error-table-section { width: 100%; max-width: 1200px; background-color: var(--white); padding: 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 30px; }
+    .table-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+    .table-controls .left-group { display: flex; flex-direction: column; align-items: flex-start; }
+    .error-table-section .left-group h2 { font-size: clamp(20px, 3vw, 22px); font-weight: 800; margin-bottom: 3px; color: var(--text-primary); }
+    .table-info-text { font-size: 0.85em; color: var(--text-secondary); }
+    .table-controls .btn-toggle-penalties { background-color: var(--secondary-blue); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size:14px; display: inline-flex; align-items: center; gap: 6px; }
+    .table-controls .btn-toggle-penalties:hover { background-color: #006DC7; }
+    
+    .errors-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; text-align: left; }
+    .errors-table th, .errors-table td { padding: 12px 15px; vertical-align: middle; font-size: 15px; }
+    .errors-table thead th { background-color: var(--background-gray); color: var(--text-primary); font-weight: 700; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }
+    .errors-table thead th:first-child { border-radius: 8px 0 0 8px; }
+    .errors-table thead th:last-child { border-radius: 0 8px 8px 0; }
+    .errors-table tbody tr { background-color: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: box-shadow 0.2s; }
+    .errors-table tbody tr:hover { box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
+    .errors-table tbody td:first-child { border-radius: 8px 0 0 8px; }
+    .errors-table tbody td:last-child { border-radius: 0 8px 8px 0; }
+    .errors-table .col-error { width: 40%; font-size: 14px; }
+    .errors-table .col-pen-gpt, .errors-table .col-pen-prof, .col-alumnos { width: 15%; text-align: center; }
+    .errors-table .col-pen-prof input[type="number"] { width: 80px; padding: 8px; border: 1px solid var(--input-border); border-radius: 5px; text-align: center; font-family: 'Nunito Sans', sans-serif; font-size:15px; -moz-appearance: textfield; }
+    .errors-table .col-pen-prof input[type="number"]::-webkit-outer-spin-button,
+    .errors-table .col-pen-prof input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .errors-table .col-pen-prof input[type="number"]:focus { outline: none; border-color: var(--primary-blue); }
+    
+    /* ---- NUEVA REGLA CSS IMPORTANTE ---- */
+    /* Oculta la columna de ChatGPT cuando la tabla tiene esta clase */
+    .errors-table.chatgpt-columna-oculta .col-pen-gpt {
+        display: none;
+    }
+    /* ---- FIN NUEVA REGLA CSS ---- */
+    
+    .action-buttons { display: flex; justify-content: flex-end; gap: 15px; margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--input-border); }
+    .action-buttons .btn { padding: 12px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: background-color 0.3s, color 0.3s; border: none; font-size: 1em; display:inline-flex; align-items:center; gap:8px; }
+    .btn-save-changes { background-color: var(--secondary-blue); color: var(--white); }
+    .btn-save-changes:hover { background-color: #006DC7; }
+    .btn-save-changes:disabled { background-color: #cccccc; cursor: not-allowed; color: #666; }
+    .btn-next { background-color: var(--primary-blue); color: var(--white); }
+    .btn-next:hover { background-color: #303dbb; }
+    .btn-next:disabled { background-color: #cccccc; cursor: not-allowed; color: #666; }
+    
+    .input-error-highlight { border-color: var(--danger-red) !important; }
+    .error-message-text { color: var(--danger-red); font-size: 0.8em; margin-top: 4px; text-align:center; display: block; }
+
+    /* --- Estilos para la sección "Datos ejercicio" --- */
+    .datos-ejercicio-container {
+        background-color: var(--white);
+        padding: 30px 40px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        width: 100%;
+        max-width: 700px; /* O el ancho que desees */
+        margin-bottom: 40px; /* Espacio antes de la barra de progreso */
+    }
+    .datos-ejercicio-container h2 {
+        text-align: center;
+        font-size: clamp(20px, 3vw, 24px);
+        font-weight: 800;
+        margin-bottom: 30px;
+        color: var(--text-primary);
+    }
+    .dato-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--input-border);
+    }
+    .dato-item:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+    .dato-item .label {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 15px;
+        margin-right: 20px;
+        white-space: nowrap; /* Evita que el label se parta */
+    }
+    .dato-item .value {
+        font-weight: 700;
+        color: var(--text-primary);
+        background-color: #F0F0F0; /* Fondo gris claro para el valor */
+        padding: 10px 15px;
+        border-radius: 8px;
+        font-size: 16px;
+        text-align: left; /* Cambiado de right a left para mejor lectura */
+        flex-grow: 1; 
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+    {# Si quieres un título de página grande como "Sistema de Reconocimiento..." aquí, puedes usar el bloque page_title de base_ce.html #}
+    {# {% block page_title %}Sistema de Reconocimiento y Validación Automática{% endblock page_title %} #}
+    {# O ponerlo directamente aquí si no está en el bloque page_title de la base #}
+    <section class="page-title-section" style="text-align: center; padding: 0 0 20px 0; width:100%; max-width:900px;">
+        {# Este título es opcional si ya lo tienes en el bloque page_title de la base #}
+        {# Si base_ce.html YA tiene un bloque para el título principal, este h1 podría no ser necesario aquí #}
+        <h1 style="font-size: clamp(24px, 4vw, 30px); font-weight: 900; color: var(--text-primary);">
+            Sistema de Reconocimiento y Validación Automática
+        </h1>
+    </section>
+
+    <div class="datos-ejercicio-container">
+        <h2>Datos ejercicio</h2>
+        <div class="dato-item">
+            <span class="label">Nombre Ejercicio</span>
+            <span class="value">{{ ejercicio.nombre|default:"No proporcionado" }}</span>
+        </div>
+        <div class="dato-item">
+            <span class="label">Asignatura</span>
+            <span class="value">{{ ejercicio.asignatura|default:"No proporcionada" }}</span>
+        </div>
+        <div class="dato-item">
+            <span class="label">Convocatoria</span>
+            <span class="value">{{ ejercicio.convocatoria|default:"No proporcionada" }}</span>
+        </div>
+        <div class="dato-item">
+            <span class="label">Fecha examen</span>
+            <span class="value">{{ ejercicio.fecha_examen|date:"d/m/Y"|default:"No proporcionada" }}</span>
+        </div>
+    </div>
+
+    <section class="progress-section">
+        <h2>Corrección de Exámenes con IA</h2>
+        <div class="progress-bar-container">
+            <div class="progress-line" id="progress-line"></div>
+            <div class="progress-bar-steps">
+                <div class="progress-step" id="step-1"><div class="circle">1</div><div class="label">Penalización Errores</div></div>
+                <div class="progress-step" id="step-2"><div class="circle">2</div><div class="label">Validación OCR</div></div>
+                <div class="progress-step" id="step-3"><div class="circle">3</div><div class="label">Corrección de errores</div></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="error-table-section">
+        <div class="table-controls">
+            <div class="left-group">
+                <h2>Penalización Errores</h2>
+                <span class="table-info-text">(Listado de errores y número de alumnos)</span>
+            </div>
+            {# Botón con ID correcto y texto inicial reflejando que la columna está oculta #}
+            <button class="btn-toggle-penalties" id="toggle-chatgpt-column-btn">
+                <i class="fas fa-eye"></i> Mostrar Penalización GPT
+            </button>
+        </div>
+        <form id="penalties-form">
+            {# Tabla con ID correcto y clase inicial para ocultar la columna ChatGPT #}
+            <table class="errors-table chatgpt-columna-oculta" id="errors-table-element">
+                <thead>
+                    <tr>
+                        <th class="col-error">Error</th>
+                        <th class="col-pen-gpt">Penalización Chat GPT</th>
+                        <th class="col-pen-prof">Penalización del profesor</th>
+                        <th class="col-alumnos">Alumnos con el error</th>
+                    </tr>
+                </thead>
+                <tbody id="errors-table-body">
+                    {% for error in errores_lista %}
+                    <tr>
+                        <td>{{ error.descripcion }}</td>
+                        <td class="col-pen-gpt">{{ error.penalizacion_gpt|default_if_none:"-" }}</td>
+                        <td class="col-pen-prof">
+                            <input type="number" name="penalizacion_prof_{{ error.id }}"
+                                   value="{{ error.penalizacion_profesor|default_if_none:'' }}"
+                                   placeholder="-" step="0.01" min="0" max="10" required>
+                            <small class="error-message-text" style="display: none;"></small>
+                        </td>
+                        <td class="col-alumnos">{{ error.num_alumnos }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" style="text-align:center; padding:20px;">No hay errores definidos para este ejercicio.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="action-buttons">
+                <button type="button" class="btn btn-save-changes" id="save-changes-btn">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+                <button type="button" class="btn btn-next" id="next-step-btn" disabled>
+                    Siguiente <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+    </section>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const toggleChatGPTButton = document.getElementById('toggle-chatgpt-column-btn'); 
+    const errorsTable = document.getElementById('errors-table-element');
+    
+    const saveChangesBtn = document.getElementById('save-changes-btn');
+    const nextStepBtn = document.getElementById('next-step-btn');
+    const penaltyInputs = document.querySelectorAll('#penalties-form .col-pen-prof input[type="number"]');
+    let currentProgressStep = 1;
+
+    function updateProgressBar(step) {
+        currentProgressStep = step;
+        const stepsElements = [document.getElementById('step-1'), document.getElementById('step-2'), document.getElementById('step-3')];
+        const progressLine = document.getElementById('progress-line');
+        
+        stepsElements.forEach((stepEl, index) => {
+            if (!stepEl) return; // Seguridad por si un ID no existe
+            stepEl.classList.remove('active', 'completed');
+            if ((index + 1) < step) {
+                stepEl.classList.add('completed');
+            } else if ((index + 1) === step) {
+                stepEl.classList.add('active');
+            }
+        });
+        
+        let progressPercentage = 0;
+        if (stepsElements.length > 1 && stepsElements.every(el => el)) { // Asegurarse que todos los elementos existen
+             if (step === 1) progressPercentage = 0; 
+             else if (step === 2) progressPercentage = 50; 
+             else if (step >= 3) progressPercentage = 100; // Si hay mas de 3 pasos, se queda en 100
+        } else if (stepsElements.length === 1 && step >=1 && stepsElements[0]) {
+             progressPercentage = 100;
+        }
+        
+        if(progressLine) progressLine.style.width = `${progressPercentage}%`;
+    }
+    updateProgressBar(currentProgressStep); // Inicia la barra de progreso
+
+    if (toggleChatGPTButton && errorsTable) {
+        function updateButtonAppearanceForChatGPT() {
+            if (errorsTable.classList.contains('chatgpt-columna-oculta')) {
+                toggleChatGPTButton.innerHTML = '<i class="fas fa-eye"></i> Mostrar Penalización GPT';
+            } else {
+                toggleChatGPTButton.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar Penalización GPT';
+            }
+        }
+        updateButtonAppearanceForChatGPT(); // Sincroniza el botón con el estado inicial de la tabla
+
+        toggleChatGPTButton.addEventListener('click', function() {
+            errorsTable.classList.toggle('chatgpt-columna-oculta');
+            updateButtonAppearanceForChatGPT(); 
+        });
+    }
+    
+    function validatePenaltyInputs() {
+        let allInputsValid = true;
+        penaltyInputs.forEach(input => {
+            const valueStr = input.value.trim();
+            const errorMsgElement = input.nextElementSibling; 
+            input.classList.remove('input-error-highlight');
+            if (errorMsgElement) errorMsgElement.style.display = 'none';
+
+            if (input.required && valueStr === '') {
+                input.classList.add('input-error-highlight');
+                if (errorMsgElement) { errorMsgElement.textContent = 'Campo obligatorio.'; errorMsgElement.style.display = 'block'; }
+                allInputsValid = false;
+            } else if (valueStr !== '') {
+                const valueNum = parseFloat(valueStr); 
+                const min = parseFloat(input.min); 
+                const max = parseFloat(input.max);
+                if (isNaN(valueNum) || (!isNaN(min) && valueNum < min) || (!isNaN(max) && valueNum > max)) {
+                    input.classList.add('input-error-highlight');
+                    if (errorMsgElement) { 
+                        let msg = 'Valor inválido.';
+                        if (!isNaN(min) && !isNaN(max)) msg = `Valor entre ${min} y ${max}.`;
+                        else if (!isNaN(min)) msg = `Mínimo ${min}.`;
+                        else if (!isNaN(max)) msg = `Máximo ${max}.`;
+                        errorMsgElement.textContent = msg; 
+                        errorMsgElement.style.display = 'block'; 
+                    }
+                    allInputsValid = false;
+                }
+            }
+        });
+        return allInputsValid;
+    }
+
+    if (saveChangesBtn) {
+        saveChangesBtn.addEventListener('click', function() {
+            if (validatePenaltyInputs()) {
+                console.log("SIMULACIÓN: Cambios en penalizaciones guardados (cliente).");
+                if(nextStepBtn) nextStepBtn.disabled = false; 
+                saveChangesBtn.innerHTML = '<i class="fas fa-check"></i> Guardado';
+                saveChangesBtn.disabled = true; 
+                setTimeout(() => {
+                   saveChangesBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+                   // saveChangesBtn.disabled = false; // Podrías rehabilitarlo si quieres permitir más guardados sin cambios
+                }, 2000);
+            } else {
+                alert("Algunos campos de penalización tienen errores o están incompletos.");
+                if(nextStepBtn) nextStepBtn.disabled = true;
+            }
+        });
+    }
+
+     if (nextStepBtn) {
+        nextStepBtn.addEventListener('click', function() {
+            if (!this.disabled) { // Solo actuar si el botón está habilitado
+            
+                console.log("Botón 'Siguiente' (desde Penalización Errores) pulsado.");
+                console.log("Redirigiendo a la pantalla de Validación OCR...");
+
+             window.location.href = "{% url 'vista_mostrar_paso3_ocr' %}";
+                
+
+            }
+        });
+    }
+
+    penaltyInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            if(nextStepBtn) nextStepBtn.disabled = true; 
+            if(saveChangesBtn) {
+                saveChangesBtn.disabled = false;
+                saveChangesBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+            }
+        });
+    });
+});
+</script>
+{% endblock extra_js %}

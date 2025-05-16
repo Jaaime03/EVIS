@@ -68,3 +68,4 @@ class ResultadoAlumnoSerializer(serializers.Serializer):
         errores = AlumnoErrorEjercicio.objects.filter(ejercicio_alumno=obj)
         penal_prof = sum(e.error.penalizacion_prof for e in errores)
         return max(obj.enunciado.puntuacion_ejercicio - penal_prof, 0.0)
+

@@ -1,0 +1,678 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EVIS - Corregir Ejercicio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> <style>
+        :root {
+            --background-gray: #F6F6F6;
+            --text-primary: #1D1D1D;
+            --text-secondary: rgba(0, 0, 0, 0.50);
+            --input-background: #FFF; /* Cambiado a blanco como en la imagen */
+            --input-border: #E0E0E0; /* Borde sutil para inputs */
+            --primary-blue: #3E4FE0; /* Azul principal de botones */
+            --secondary-blue: #0085F5; /* Azul secundario (header) */
+            --light-gray: #CACACA;
+            --white: #FFF;
+            --black: #1D1D1D;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--white);
+            font-family: 'Nunito Sans', sans-serif;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            background-color: var(--background-gray);
+            padding: 40px 5%; /* Padding superior e inferior y lateral */
+            border-radius: 44px 44px 0 0;
+            margin-top: -44px; /* Solapar ligeramente con header si hubiera */
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- Header --- */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 5%;
+            background-color: var(--white); /* Fondo blanco para el header */
+            width: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-logo img {
+            height: 40px;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 24px; /* Tamaño del icono */
+            color: var(--text-primary);
+        }
+         .back-button i {
+             color: var(--secondary-blue); /* Icono azul */
+         }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-info img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover; /* Para asegurar que la imagen se vea bien */
+        }
+
+        .user-info span {
+            font-weight: 600;
+        }
+
+        .logout-button {
+            background-color: var(--secondary-blue);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+            transition: background 0.3s;
+            text-decoration: none;
+        }
+
+        .logout-button:hover {
+            background-color: #006DC7;
+        }
+
+        /* --- Título y Subtítulo --- */
+        .title-section {
+            text-align: center;
+            margin-top: 40px; /* AÑADIDO: Más espacio ARRIBA de toda la sección del título */
+            margin-bottom: 40px;
+            max-width: 800px;
+        }
+
+        .title-section h1 {
+            font-size: clamp(24px, 4vw, 36px);
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        .title-section p {
+            font-size: clamp(14px, 2vw, 18px);
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 20px; /* AÑADIDO/AJUSTADO: Más espacio debajo del párrafo del título */
+
+        }
+
+        /* --- Botón de Carga --- */
+        .upload-section {
+            width: 100%;
+            max-width: 700px; /* Ancho máximo del botón de carga */
+            margin-bottom: 50px;
+            text-align: center;
+        }
+
+        .upload-button-styled {
+            background-color: var(--primary-blue);
+            color: var(--white);
+            border: none;
+            border-radius: 20px; /* Bordes redondeados */
+            padding: 60px 30px; /* Padding generoso */
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            transition: background-color 0.3s ease;
+        }
+
+        .upload-button-styled:hover {
+            background-color: #303dbb; /* Un poco más oscuro al pasar el ratón */
+        }
+
+        .upload-button-styled i {
+            font-size: 48px; /* Icono grande */
+            margin-bottom: 15px;
+        }
+
+        .upload-button-styled span {
+            font-size: clamp(18px, 3vw, 24px);
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .upload-button-styled small {
+            font-size: clamp(12px, 1.5vw, 14px);
+            font-weight: 600;
+            opacity: 0.8;
+        }
+
+        #file-input {
+            display: none; /* Ocultar el input real */
+        }
+
+        /* --- Iconos Info (Privacidad, etc.) --- */
+        .info-icons {
+            display: flex;
+            justify-content: center;
+            gap: clamp(20px, 5vw, 50px);
+            margin-bottom: 50px;
+            flex-wrap: wrap;
+        }
+
+        .info-icon-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: clamp(13px, 1.8vw, 15px);
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .info-icon-item img {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* --- Formulario Datos Ejercicio --- */
+        .exercise-data-section {
+            width: 100%;
+            max-width: 1100px; /* Ancho máximo del formulario */
+            margin-bottom: 40px;
+        }
+
+        .exercise-data-section h2 {
+            text-align: center;
+            font-size: clamp(22px, 3.5vw, 32px);
+            font-weight: 800;
+            margin-top: 20px; /* AÑADIDO/AJUSTADO: Más espacio arriba del título "Datos ejercicio" */
+            margin-bottom: 30px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Columnas adaptables */
+            gap: 25px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="date"],
+        .form-group select,
+        .form-group textarea {
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--input-border);
+            background-color: var(--input-background);
+            font-family: 'Nunito Sans', sans-serif;
+            font-size: 16px;
+            width: 100%;
+            transition: border-color 0.3s ease;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+        }
+
+        .form-group textarea {
+            min-height: 100px; /* Altura mínima para textareas */
+            resize: vertical; /* Permitir redimensionar verticalmente */
+        }
+
+        /* Estilo específico para input de fecha con icono */
+        .date-input-wrapper {
+            position: relative;
+        }
+
+        .date-input-wrapper input[type="date"] {
+            padding-right: 40px; /* Espacio para el icono */
+        }
+
+        .date-input-wrapper i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none; /* Para que no interfiera con el click en el input */
+        }
+        /* Ocultar icono de calendario por defecto del navegador si es posible */
+         input[type="date"]::-webkit-calendar-picker-indicator {
+            /* display: none; */ /* Descomentar si se quiere ocultar siempre */
+            /* opacity: 0; */ /* Alternativa */
+         }
+
+
+        /* --- Mensaje de Carga y Botón Final --- */
+        .upload-status {
+            text-align: center;
+            margin-top: 20px; /* Espacio sobre el mensaje */
+            margin-bottom: 30px; /* Espacio bajo el mensaje */
+            display: none; /* Oculto por defecto */
+            color: #28a745; /* Verde éxito */
+            font-weight: 700;
+        }
+        .upload-status.visible {
+            display: block;
+        }
+
+        .upload-status i {
+            margin-right: 8px;
+        }
+
+        .submit-button-container {
+            text-align: center;
+            width: 100%;
+            margin-top: 60px; /* AÑADIDO/AUMENTADO: Más espacio ARRIBA del botón "Comenzar..." */
+            margin-bottom: 30px; 
+        }
+
+        .submit-button {
+            background-color: var(--primary-blue);
+            color: var(--white);
+            border: none;
+            border-radius: 12px;
+            padding: 15px 40px;
+            font-size: clamp(16px, 2.5vw, 20px);
+            font-weight: 800;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .submit-button:hover {
+            background-color: #303dbb;
+        }
+        .submit-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+
+        /* --- Popup de Carga --- */
+        .loading-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); /* Fondo semitransparente */
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Por encima de todo */
+        }
+        .loading-popup.visible {
+             display: flex;
+        }
+
+        .loading-content {
+            background-color: var(--white);
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .loading-spinner {
+            border: 6px solid #f3f3f3; /* Light grey */
+            border-top: 6px solid var(--primary-blue); /* Blue */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px auto; /* Centrado y espacio inferior */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-content p {
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+
+        /* --- Footer --- */
+        .black-footer {
+          width: 100%;
+          min-height: 280px; /* Reducido un poco */
+          background: var(--black);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 40px 5%; /* Padding vertical y horizontal */
+          z-index: 1;
+          position: relative;
+          color: var(--light-gray);
+        }
+
+        .footer-content {
+          max-width: 1200px;
+          width: 100%;
+          display: flex;
+          gap: 50px;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          justify-content: space-between; /* Distribuir mejor el espacio */
+        }
+
+        .footer-logo {
+          margin-top: 0; /* Alineado con el resto */
+          width: 70px; /* Más pequeño */
+          height: 70px;
+          flex-shrink: 0;
+          align-self: center;
+        }
+
+        .footer-grid {
+            display: flex;
+            gap: clamp(30px, 6vw, 60px); /* Reducido gap */
+            justify-content: space-around;
+            flex-grow: 1;
+            flex-wrap: wrap;
+        }
+
+        .footer-col {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem; /* Reducido gap */
+          min-width: 150px;
+        }
+
+        .footer-title {
+          color: var(--white);
+          font-size: 16px; /* Ligeramente más pequeño */
+          font-weight: 700;
+          margin-bottom: 0.5rem;
+        }
+
+        .footer-links {
+          display: flex;
+          flex-direction: column;
+          gap: 10px; /* Reducido gap */
+        }
+
+        .footer-link {
+          color: var(--light-gray);
+          font-size: 15px; /* Ligeramente más pequeño */
+          font-weight: 400;
+          text-decoration: none;
+          transition: color 0.3s ease;
+        }
+        .footer-link:hover {
+            color: var(--white);
+        }
+
+        .social-links {
+          display: flex;
+          flex-direction: column;
+          gap: 10px; /* Reducido gap */
+        }
+
+        .social-link {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          text-decoration: none;
+          transition: opacity 0.3s ease;
+        }
+        .social-link:hover {
+            opacity: 0.8;
+        }
+
+        .social-link img {
+          width: 20px; /* Iconos sociales más pequeños */
+          height: 20px;
+        }
+
+        .social-link span {
+          color: var(--light-gray);
+          font-size: 15px; /* Ligeramente más pequeño */
+          font-weight: 400;
+        }
+
+        /* --- Media Queries para Responsividad --- */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 30px 3%;
+                border-radius: 30px 30px 0 0;
+                margin-top: -30px;
+            }
+            .app-header {
+                padding: 15px 3%;
+            }
+            .header-left { gap: 15px; }
+            .header-right { gap: 15px; }
+            .user-info span { display: none; } /* Ocultar nombre en móvil */
+
+            .form-grid {
+                grid-template-columns: 1fr; /* Una columna en móvil */
+            }
+             .upload-button-styled { padding: 40px 20px; }
+             .upload-button-styled i { font-size: 36px; }
+
+             .footer-content { flex-direction: column; align-items: center; gap: 30px; }
+             .footer-grid { justify-content: center; text-align: center; }
+             .footer-col { align-items: center; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="header-left">
+            <a href="{% url 'eleccion_menu' %}" class="back-button" aria-label="Volver al menú">
+                 <i class="fas fa-arrow-left"></i>
+            </a>
+            <a href="{% url 'eleccion_menu' %}" class="header-logo">
+                <img src="{% static 'login/img/image-1-1.png' %}" alt="Logo EVIS">
+            </a>
+        </div>
+        <div class="header-right">
+            <div class="user-info">
+                 <img src="https://placehold.co/32x32/0085F5/FFF?text={{ user.username|first|upper }}" alt="Avatar de usuario">
+                <span>{{ user.username }}</span>
+            </div>
+             {% if user.is_authenticated %}
+                {# --- CORREGIDO: Logout con Formulario POST --- #}
+                <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-button">Cerrar sesión</button>
+                </form>
+             {% endif %}
+        </div>
+    </header>
+
+    <main class="main-content">
+
+        <section class="title-section">
+            <h1>Sistema de Reconocimiento y Validación Automática</h1>
+            <p>
+                Usa OCR para extraer el texto de la imagen, y un LLM para
+                analizar todos los archivos dados y corregirlos minimizando el
+                sesgo entre ellos.
+            </p>
+        </section>
+
+        <section class="upload-section">
+            <input type="file" id="file-input" multiple accept=".zip, image/*"> <button class="upload-button-styled" onclick="document.getElementById('file-input').click();">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>Sube cualquier archivo o carpeta</span>
+                <small>(Formato .zip o imágenes)</small>
+            </button>
+             <div id="selected-files" style="margin-top: 15px; font-size: 14px;"></div>
+        </section>
+
+        <section class="info-icons">
+             <div class="info-icon-item">
+                <img src="{% static 'core/img/ic_1.png' %}" alt=""> <span>Privacidad</span>
+            </div>
+            <div class="info-icon-item">
+                <img src="{% static 'core/img/ic_2.png' %}" alt=""> <span>Fácil Uso</span>
+            </div>
+            <div class="info-icon-item">
+                <img src="{% static 'core/img/ic_3.png' %}" alt=""> <span>Alto Rendimiento</span>
+            </div>
+        </section>
+
+        <section class="exercise-data-section">
+            <h2>Datos ejercicio</h2>
+            <form id="exercise-form" method="POST" action="{% url 'procesar_carga_paso1' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="nombre_ejercicio">Nombre Ejercicio</label>
+                        <input type="text" id="nombre_ejercicio" name="nombre_ejercicio" list="nombre-ejercicio-list" placeholder="Ej: Ejercicio de creación de tablas" required>
+                        <datalist id="nombre-ejercicio-list">
+                            {% for nombre_ej in nombres_ejercicios_existentes_stub %} {# Datos stub de la vista #}
+                                <option value="{{ nombre_ej }}">
+                            {% empty %}
+                                <option value="Ejercicio Placeholder 1">
+                            {% endfor %}
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="asignatura">Asignatura</label>
+                        <input type="text" id="asignatura" name="asignatura" list="asignatura-list" placeholder="Ej: Base de Datos GradoInf" required>
+                        <datalist id="asignatura-list">
+                             {% for asig in asignaturas_existentes_stub %} {# Datos stub de la vista #}
+                                <option value="{{ asig }}">
+                            {% empty %}
+                                <option value="Asignatura Placeholder 1">
+                            {% endfor %}
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="enunciado_file_input">Enunciado (.txt)</label>
+                        <input type="file" id="enunciado_file_input" name="enunciado_file" accept=".txt" required class="file-input-real">
+                        <button type="button" class="file-input-styled-button" onclick="document.getElementById('enunciado_file_input').click();">
+                        </button>
+                    </div>
+                     <div class="form-group">
+                        <label for="estructura_tablas_file_input">Estructura tablas (.png, .jpeg, .jpg)</label>
+                        <input type="file" id="estructura_tablas_file_input" name="estructura_tablas_file" accept="image/png, image/jpeg, image/jpg" class="file-input-real">
+                         <button type="button" class="file-input-styled-button" onclick="document.getElementById('estructura_tablas_file_input').click();">
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label for="convocatoria_tipo">Convocatoria</label>
+                        <input type="text" id="convocatoria_tipo" name="convocatoria_tipo" list="convocatoria-tipo-list" placeholder="Ej: Ordinaria" required>
+                         <datalist id="convocatoria-tipo-list"><option value="Ordinaria"><option value="Extraordinaria"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="fecha_examen">Fecha examen</label>
+                        <input type="date" id="fecha_examen" name="fecha_examen" required>
+                    </div>
+                </div>
+                <div id="upload-status-message" class="upload-status"><i class="fas fa-check-circle"></i> ARCHIVOS CARGADOS</div>
+                <div class="submit-button-container">
+                    <button type="submit" id="submit-paso1-btn" class="submit-button">Comenzar proceso de corrección</button>
+                </div>
+            </form>
+        </section>
+        <section class="info-icons">
+            </section>
+    </main>
+
+    <footer class="black-footer">
+      <div class="footer-content">
+        <img src="{% static 'login/img/image-1-2.png' %}" class="footer-logo" alt="EVIS Logo Footer">
+        <div class="footer-grid">
+            <div class="footer-col">
+              <h3 class="footer-title">Universidad</h3>
+              <nav class="footer-links">
+                <a href="https://www.upm.es/UPM/Centros?id=CON00289&prefmt=centros&fmt=detail" class="footer-link" target="_blank" rel="noopener noreferrer">Sobre Nosotros</a>
+                <a href="#" class="footer-link">Contacto</a>
+                <a href="#" class="footer-link">FAQ</a>
+              </nav>
+            </div>
+            <div class="footer-col">
+              <h3 class="footer-title">Información Legal</h3>
+              <nav class="footer-links">
+                <a href="#" class="footer-link">Términos y Condiciones</a>
+                <a href="#" class="footer-link">Política de Privacidad</a>
+                <a href="#" class="footer-link">Política de Cookies</a>
+              </nav>
+            </div>
+            <div class="footer-col">
+              <h3 class="footer-title">Síguenos</h3>
+              <div class="social-links">
+                <a href="https://www.linkedin.com/school/universidad-politecnica-de-madrid/?originalSubdomain=es" target="_blank" rel="noopener noreferrer" class="social-link">
+                  <img src="{% static 'login/img/rs-1.png' %}" alt="LinkedIn">
+                  <span>LinkedIn</span>
+                </a>
+                <a href="https://www.facebook.com/ETSIINF/?locale=es_ES" target="_blank" rel="noopener noreferrer" class="social-link">
+                  <img src="{% static 'login/img/rs-2.png' %}" alt="Facebook">
+                  <span>Facebook</span>
+                </a>
+                <a href="https://x.com/ctbupm" target="_blank" rel="noopener noreferrer" class="social-link">
+                  <img src="{% static 'login/img/rs-3.png' %}" alt="X">
+                  <span>X</span>
+                </a>
+              </div>
+            </div>
+        </div> </div> </footer>
+
+    <div id="loading-popup" class="loading-popup">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Procesando ejercicio...</p>
+        </div>
+    </div>

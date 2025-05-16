@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=1.0, user-scalable=no">
+    <title>EVIS - Login</title>
+    <link rel="stylesheet" href="{% static 'login/style.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@600;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="main-container">
+        <img
+        src="{% static 'login/img/cir-1.png' %}"
+        class="decorative-circle circle-left"
+        style="left: 0px; top: 0;width: 350px;"
+        alt="Decoración circular">
+        <img
+        src="{% static 'login/img/cir-2.png' %}"
+        class="decorative-circle circle-right"
+        style="right: 0px; bottom: 400;width: 300px;"
+        alt="Decoración circular">
+            <div class="content-frame">
+            <img src="{% static 'login/img/image-1-1.png' %}" class="app-logo" alt="Logo EVIS">
+            <h1 class="login-title">Iniciar sesión</h1>
+            
+            <form method="post" action="" class="login-form">
+                {% csrf_token %}
+                <div class="input-field">
+                    <input type="email" name="email" id="email" required
+                           placeholder="Dirección de correo electrónico">
+                </div>
+
+                <div class="input-field">
+                    <input type="password" name="password" id="password" required
+                           placeholder="Contraseña (debe tener más de 8 caracteres)">
+                </div>
+
+                <button type="submit" class="login-button">
+                    <span class="button-text">Iniciar sesión</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <footer class="black-footer">
+        <div class="footer-content">
+            <!-- Logo -->
+            <img src="{% static 'login/img/image-1-2.png' %}" class="footer-logo" alt="EVIS Logo">
+    
+            <!-- Columnas -->
+            <div class="footer-grid">
+                <div class="footer-columns">
+                    <!-- Columna Universidad -->
+                    <div class="footer-col">
+                        <h3 class="footer-title">Universidad</h3>
+                        <nav class="footer-links">
+                            <a href="https://www.upm.es/UPM/Centros?id=CON00289&prefmt=centros&fmt=detail" class="footer-link">Sobre Nosotros</a>
+                            <a href="#" class="footer-link">Contacto</a>
+                            <a href="#" class="footer-link">FAQ</a>
+                        </nav>
+                    </div>
+        
+                    <!-- Columna Legal -->
+                    <div class="footer-col">
+                        <h3 class="footer-title">Información Legal</h3>
+                        <nav class="footer-links">
+                            <a href="#" class="footer-link">Términos y Condiciones</a>
+                            <a href="#" class="footer-link">Política de Privacidad</a>
+                            <a href="#" class="footer-link">Política de Cookies</a>
+                        </nav>
+                    </div>
+        
+                    <!-- Columna Redes Sociales -->
+                    <div class="footer-col">
+                        <h3 class="footer-title">Síguenos</h3>
+                        <div class="social-links">
+                            <a href="https://www.linkedin.com/school/universidad-politecnica-de-madrid/?originalSubdomain=es" target="_blank" class="social-link">
+                                <img src="{% static 'login/img/rs-1.png' %}" alt="LinkedIn">
+                                <span>LinkedIn</span>
+                            </a>
+                            <a href="https://www.facebook.com/ETSIINF/?locale=es_ES" target="_blank" class="social-link">
+                                <img src="{% static 'login/img/rs-2.png' %}" alt="Facebook">
+                                <span>Facebook</span>
+                            </a>
+                            <a href="https://x.com/ctbupm" target="_blank" class="social-link">
+                                <img src="{% static 'login/img/rs-3.png' %}" alt="X">
+                                <span>X</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+{% if error %}
+<script>
+  alert("{{ error|escapejs }}");
+</script>
+{% endif %}
+
+</body>
+</html>

@@ -1,17 +1,28 @@
+# ====================
 # Django
+# ====================
 *.pyc
 __pycache__/
-db.sqlite3         # <-- No subas tu base de datos local
-/media/            # <-- Por si guardas imágenes o archivos
-/staticfiles/      # <-- Archivos estáticos generados
+db.sqlite3
+/media/
+/staticfiles/
 
-# Entorno virtual (muy importante)
+# ====================
+# Entornos virtuales
+# ====================
 venv/
 env/
 
+# ====================
+# Configuración de entorno
+# ====================
+.env
+*.env
+
+# ====================
 # Archivos del sistema
+# ====================
 .DS_Store
 .idea/
 .vscode/
 *.log
-.env # <-- No subas tu archivo de variables de entorno por la clave secreta

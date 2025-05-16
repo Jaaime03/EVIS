@@ -1,0 +1,10 @@
+:root {
+  --shape-corner-medium: 12px;
+  --primary-color: #4a90e2;
+  --secondary-color: #357abd;
+  --text-color: #333;
+  --background-light: #f5f5f5;
+  --border-color: #ddd;
+}
+
+/* Opcional: añadir variables de tipografía si el diseño lo requiere */

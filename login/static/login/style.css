@@ -1,0 +1,284 @@
+:root {
+  --Corner-Medium: 12px;
+  --background-gray: #F6F6F6;
+  --input-background: rgba(217, 217, 217, 0.60);
+  --text-primary: #1D1D1D;
+  --text-secondary: rgba(0, 0, 0, 0.50);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #FFF;
+  overflow-x: hidden;
+  zoom: 0.8;
+
+}
+
+.main-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+.scaled-page {
+  transform: scale(0.8);
+  transform-origin: top center;
+}
+
+.content-frame {
+  width: min(95%, 1869px);
+  max-width: 1869px;
+  min-height: 916px;
+  border-radius: 44px 44px 0 0;
+  background: var(--background-gray);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5% 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.decorative-circle {
+  width: 680px;
+  height: auto;      /* el navegador ajusta la altura para mantener proporción */
+  object-fit: contain; /* Respeta transparencia y escala bien */
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.circle-left {
+  width: 400px;       /* ajusta a tu gusto: aquí reducimos el tamaño */
+  /* top y transform los manejamos inline en el HTML */
+}
+
+
+.app-logo {
+  width: min(90%, 344px);  /* Nuevo ancho */
+  height: 244px;           /* Nueva altura */
+  flex-shrink: 0;
+  margin-bottom: 4vh;
+}
+
+.login-title {
+  width: min(90%, 522px);  /* Nuevo ancho */
+  height: 115px;           /* Nueva altura */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #1D1D1D;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: clamp(2rem, 5vw, 49px); /* Responsivo */
+  font-weight: 900;
+  line-height: 67px;       /* 136.735% */
+  text-align: center;
+  margin: 0 auto 6vh;      /* Centrado mejorado */
+}
+
+.login-form {
+  width: 100%;
+  max-width: 587px;
+  display: flex;
+  flex-direction: column;
+  gap: 4vh;
+}
+
+.input-field {
+  width: 100%;
+  height: 70px;
+  border-radius: var(--Corner-Medium);
+  background: var(--input-background);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.input-field input {
+  width: min(90%, 457px);
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-secondary);
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: clamp(1rem, 2vw, 22px);
+  font-weight: 600;
+  text-align: center;
+}
+
+.input-field input::placeholder {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+
+.login-button {
+  /* Estilos del botón cuando los proporciones */
+  margin-top: 4vh;
+  width: min(90%, 587px);
+  align-self: center;
+}
+.login-button {
+  width: min(95%, 587px);  /* Máximo 587px */
+  height: 70px;
+  flex-shrink: 0;
+  background: #0085F5;
+  border: none;
+  border-radius: 28px;     /* Borde redondeado */
+  cursor: pointer;
+  transition: background 0.3s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 20px;
+  margin-top: 4vh;
+}
+
+.button-text {
+  width: min(100%, 457px);
+  height: 30px;
+  color: #F6F6F6;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: clamp(1.5rem, 3vw, 30px);
+  font-weight: 900;
+  line-height: 30px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Efectos interactivos */
+.login-button:hover {
+  background: #006DC7;
+}
+
+.login-button:active {
+  transform: scale(0.98);
+}
+
+.login-button:focus-visible {
+  outline: 3px solid #004E93;
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .content-frame {
+      border-radius: 24px 24px 0 0;
+      padding: 10% 1rem;
+  }
+  
+  .login-title {
+      margin-bottom: 4vh;
+  }
+  
+  .input-field {
+      height: 60px;
+  }
+}
+
+.black-footer {
+  width: 100%;
+  min-height: 320px;
+  background: #1D1D1D;
+  display: grid;
+  place-items: center; /* Centrado absoluto */
+  padding: 2rem 0;
+}
+.footer-container {
+  padding-top: 20px; /* Espacio desde el borde superior */
+  width: min(1930px, 95%);
+  margin: 0 auto;
+  display: flex;
+  gap: 4rem;
+  align-items: flex-start;
+}
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  gap: 50px;
+}
+
+.footer-logo {
+  margin-top: -120px; /* Bajar ligeramente el logo */
+  width: 93px;
+  height: 93px;
+  flex-shrink: 0;
+  align-self: center; /* Centrado vertical del logo */
+}
+
+.footer-columns {
+  display: flex;
+  gap: 80px;
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 6rem;
+  justify-content: space-between;
+  flex-grow: 1;
+}
+
+.footer-title {
+  margin-bottom: 0px !important; /* Reduce el espacio debajo del título */
+}
+
+.footer-col {
+  display: grid;
+  gap: 1.5rem;
+}
+.footer-title {
+  color: #FFF;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 27px;
+  margin-bottom: 20px;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.footer-link {
+  color: #CACACA;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 27px;
+  text-decoration: none;
+}
+
+.social-links {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.social-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.social-link img {
+  width: 24px;
+  height: 24px;
+}
+
+.social-link span {
+  color: #CACACA;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+}
