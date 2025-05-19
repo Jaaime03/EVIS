@@ -121,6 +121,14 @@ class SubirEjercicioView(APIView):
             # 9. Ejecutar corrección de errores — CAMBIO AQUÍ
             detectar_errores(transcripciones, enunciado)
 
+            request.session['datos_para_paso2'] = {
+                'nombre': nombre_ejercicio,
+                'asignatura': asignatura,
+                'convocatoria': convocatoria,
+                'fecha_examen_str': fecha_realizacion,
+                'id_enunciado_ejercicio': enunciado.id_enun_ejercicio,
+            }
+
             return HttpResponseRedirect('/correccion-ejercicio-paso2/')
 
         except Exception as e:
@@ -350,23 +358,20 @@ def procesar_carga_y_redirigir_a_paso2_view(request):
     # Si no es POST, volver a la página de carga del paso 1
     return redirect('vista_paso1_carga') # Usa el name de la URL de tu vista corregir_ejercicio_carga_view
 
+from core.models import Error, EjercicioAlumno, AlumnoErrorEjercicio  # Ajusta import según tu estructura
+
 @login_required
 def mostrar_paso2_correccion_view(request):
-    # 1. Recupera el diccionario de la sesión (usa .pop() para limpiarlo después de usarlo)
     datos_recibidos = request.session.pop('datos_para_paso2', None)
-
-    # (Opcional) Imprime en la consola de Django para verificar qué se recuperó
-    print(f"Datos recuperados de sesión para Paso 2: {datos_recibidos}")
 
     ejercicio_actual = {}
     if datos_recibidos:
-        # Intenta convertir la fecha si existe
         fecha_obj = None
         if datos_recibidos.get('fecha_examen_str'):
             try:
                 fecha_obj = datetime.datetime.strptime(datos_recibidos['fecha_examen_str'], '%Y-%m-%d').date()
             except ValueError:
-                pass # La fecha se queda como None si hay error
+                pass
 
         ejercicio_actual = {
             'nombre': datos_recibidos.get('nombre'),
@@ -374,29 +379,42 @@ def mostrar_paso2_correccion_view(request):
             'convocatoria': datos_recibidos.get('convocatoria'),
             'fecha_examen': fecha_obj,
         }
+
+        # Consulta errores reales relacionados con este ejercicio
+        # Asumiendo que tienes la relación para filtrar errores relacionados
+        
+        id_enunciado = datos_recibidos.get('id_enunciado_ejercicio')
+        errores = Error.objects.filter(alumnoerrorejercicio__ejercicio_alumno__enunciado__id_enun_ejercicio=id_enunciado).distinct()
+
+        errores_lista = []
+
+        for error in errores:
+            # Contar cuántos alumnos tienen este error en ejercicios relacionados
+            num_alumnos = AlumnoErrorEjercicio.objects.filter(error=error).values('alumno').distinct().count()
+            errores_lista.append({
+                'id': error.id_error,
+                'descripcion': error.descripcion,
+                'penalizacion_gpt': error.penalizacion_llm,
+                'penalizacion_profesor': error.penalizacion_prof,
+                'num_alumnos': num_alumnos,
+            })
     else:
-        # Si no hay datos en sesión (ej. se accedió a la URL directamente), usa placeholders
-        print("No se encontraron datos en sesión para Paso 2. Usando placeholders.")
         ejercicio_actual = {
             'nombre': 'Ejercicio (Datos no encontrados)',
             'asignatura': 'Asignatura (Datos no encontrados)',
             'convocatoria': 'Convocatoria (Datos no encontrados)',
             'fecha_examen': None,
         }
-
-    # La lista de errores puede seguir siendo placeholder
-    errores_lista_placeholder = [
-        {'id': "ErrTMP-01", 'descripcion': 'Error de ejemplo 1', 'penalizacion_gpt': -0.3, 'num_alumnos': 5, 'penalizacion_profesor': None},
-        {'id': "ErrTMP-02", 'descripcion': 'Error de ejemplo 2', 'penalizacion_gpt': -0.8, 'num_alumnos': 2, 'penalizacion_profesor': None},
-    ]
+        errores_lista = []
 
     context = {
         'username': request.user.username,
         'is_superuser': request.user.is_superuser,
-        'ejercicio': ejercicio_actual, # Aquí van los datos recuperados o los placeholders
-        'errores_lista': errores_lista_placeholder,
+        'ejercicio': ejercicio_actual,
+        'errores_lista': errores_lista,
     }
     return render(request, 'core/ce_2_carga.html', context)
+
 
 # En core/views.py
 @login_required
