@@ -43,24 +43,40 @@ def detectar_errores(transcripciones: dict, enunciado_obj: EnunciadoEjercicio) -
             "content": [
                 {
                     "type": "text",
+                    
                     "text": (
-                        "Eres un corrector automático de exámenes.\n"
-                        "A continuación tienes el enunciado de un ejercicio, una imagen con la estructura de tablas correspondiente y las respuestas de varios alumnos.\n\n"
-                        "Tu tarea es identificar errores posibles entre estas respuestas. Por cada error encontrado, proporciona:\n"
-                        "- una breve descripción,\n"
-                        "- una penalización sobre 10,\n"
-                        "- la lista de ID de los alumnos que han cometido ese error.\n\n"
-                        f"Enunciado del ejercicio:\n{enunciado_obj.enunciado_ejerc}\n\n"
-                        f"Respuestas de los alumnos:\n{respuestas}\n\n"
-                        "Devuelve solo un JSON con esta estructura (usa números enteros como clave):\n"
+                        "Eres un corrector automático de exámenes de la asignatura “Bases de Datos”. Con estas funciones:\n\n"
+                        "1. Recibirás:\n"
+                        "   a. El enunciado del ejercicio.\n"
+                        "   b. Una imagen con la estructura de tablas asociada.\n"
+                        "   c. Las respuestas de varios alumnos, con el formato JSON:\n"
+                        "      {\n"
+                        "        \"ID_alumno\": { \"ejercicio\": \"respuesta\" },\n"
+                        "        …\n"
+                        "      }\n\n"
+                        "2. Tu tarea:\n"
+                        "- Detectar errores en las respuestas, tanto:\n"
+                        "   • Errores comunes (repetidos por varios alumnos).\n"
+                        "   • Errores poco frecuentes.\n\n"
+                        "- Para cada error identificado, generar:\n"
+                        "   • “descripcion”: breve explicación del error.\n"
+                        "   • “penalizacion_llm”: puntuación a restar (sobre 10), valor numérico.\n"
+                        "   •  “alumnos”: lista de IDs que cometen ese error.\n"
+                        "4. Formato de salida:\n"
+                        "Devuelve SOLO un JSON con claves numéricas consecutivas (enteros), p. ej.:\n"
                         "{\n"
-                        "  \"1\": {\n"
-                        "    \"descripcion\": \"...\",\n"
-                        "    \"penalizacion_llm\": 0.5,\n"
-                        "    \"alumnos\": [\"123\", \"456\"]\n"
-                        "  },\n"
-                        "  ...\n"
-                        "}"
+                        "   \"1\"{\n"
+                        "     \"descripcion\": \"Breve explicación del error\",\n"
+                        "     \"penalizacion_llm\": ej.0.5,\n"
+                        "     \"alumnos\": [\"ej.A123\", \"ej.B456\"]\n"
+                        "   },\n"
+                        "   \"2\"{\n"
+                        "       ..."
+                        "   }\n"
+                        "}\n\n"
+                        "Datos de entrada\n"
+                        f"Enunciado del ejercicio:\n{enunciado_obj.enunciado_ejerc}\n\n"
+                        f"Respuestas de los alumnos:\n{respuestas}\n"
                     )
                 },
                 {
@@ -101,7 +117,7 @@ def detectar_errores(transcripciones: dict, enunciado_obj: EnunciadoEjercicio) -
             error = Error.objects.create(
                 descripcion=descripcion,
                 penalizacion_llm=penalizacion_llm,
-                penalizacion_prof=penalizacion_llm
+                penalizacion_prof=0
             )
 
             for alumno_id_str in alumnos_con_error:

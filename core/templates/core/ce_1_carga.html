@@ -248,6 +248,7 @@
 
         .form-group input[type="text"],
         .form-group input[type="date"],
+        .form-group input[type="number"],
         .form-group select,
         .form-group textarea {
             padding: 12px 15px;
@@ -567,7 +568,7 @@
                 {% csrf_token %}
                 
                 <section class="upload-section">
-                    <input type="file" id="zip" name="zip" accept=".zip"/>
+                    <input type="file" id="zip" name="zip" accept=".zip" style=display:none/>
                     <button type="button" class="upload-button-styled" onclick="document.getElementById('zip').click();">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <span>Sube cualquier carpeta</span>
@@ -579,25 +580,11 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="nombre_ejercicio">Nombre Ejercicio</label>
-                        <input type="text" id="nombre_ejercicio" name="nombre_ejercicio" list="nombre-ejercicio-list" placeholder="Ej: Ejercicio de creación de tablas" required>
-                        <datalist id="nombre-ejercicio-list">
-                            {% for nombre_ej in nombres_ejercicios_existentes_stub %} {# Datos stub de la vista #}
-                                <option value="{{ nombre_ej }}">
-                            {% empty %}
-                                <option value="Ejercicio Placeholder 1">
-                            {% endfor %}
-                        </datalist>
+                        <input type="text" id="nombre_ejercicio" name="nombre_ejercicio" list="lista_nombres_ejercicio" placeholder="Ej: Ejercicio de creación de tablas" required>
                     </div>
                     <div class="form-group">
                         <label for="asignatura">Asignatura</label>
-                        <input type="text" id="asignatura" name="asignatura" list="asignatura-list" placeholder="Ej: Base de Datos GradoInf" required>
-                        <datalist id="asignatura-list">
-                             {% for asig in asignaturas_existentes_stub %} {# Datos stub de la vista #}
-                                <option value="{{ asig }}">
-                            {% empty %}
-                                <option value="Asignatura Placeholder 1">
-                            {% endfor %}
-                        </datalist>
+                        <input type="text" id="asignatura" name="asignatura" list="lista_asignaturas" placeholder="Ej: Base de Datos GradoInf" required>
                     </div>
                     <div class="form-group">
                         <label for="enunciado_ejerc">Enunciado (.txt)</label>

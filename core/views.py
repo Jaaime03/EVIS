@@ -118,8 +118,12 @@ class SubirEjercicioView(APIView):
             # 8. Ejecutar OCR
             transcripciones = procesar_ocr(carpeta_destino)
 
+            print('Depurar OCR:', transcripciones)
+
             # 9. Ejecutar corrección de errores — CAMBIO AQUÍ
-            detectar_errores(transcripciones, enunciado)
+            errores_generados = detectar_errores(transcripciones, enunciado)
+
+            print('Depurar errores generados:', errores_generados)
 
             request.session['datos_para_paso2'] = {
                 'nombre': nombre_ejercicio,
@@ -152,8 +156,9 @@ class ErrorInformacionView(APIView):
 
         return Response(data, status=200)
 
+    
 class ActualizarPenalizacionProfView(APIView):
-    def patch(self, request, pk):
+    def post(self, request, pk):
         try:
             error = Error.objects.get(pk=pk)
         except Error.DoesNotExist:
