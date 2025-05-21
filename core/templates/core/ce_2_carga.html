@@ -174,6 +174,7 @@
             </button>
         </div>
         <form id="penalties-form">
+            {% csrf_token %}
             {# Tabla con ID correcto y clase inicial para ocultar la columna ChatGPT #}
             <table class="errors-table chatgpt-columna-oculta" id="errors-table-element">
                 <thead>
@@ -186,7 +187,7 @@
                 </thead>
                 <tbody id="errors-table-body">
                     {% for error in errores_lista %}
-                    <tr>
+                    <tr data-error-id="{{ error.id }}">
                         <td>{{ error.descripcion }}</td>
                         <td class="col-pen-gpt">{{ error.penalizacion_gpt|default_if_none:"-" }}</td>
                         <td class="col-pen-prof">
@@ -305,17 +306,67 @@ document.addEventListener('DOMContentLoaded', function () {
     if (saveChangesBtn) {
         saveChangesBtn.addEventListener('click', function() {
             if (validatePenaltyInputs()) {
-                console.log("SIMULACIÓN: Cambios en penalizaciones guardados (cliente).");
-                if(nextStepBtn) nextStepBtn.disabled = false; 
-                saveChangesBtn.innerHTML = '<i class="fas fa-check"></i> Guardado';
-                saveChangesBtn.disabled = true; 
-                setTimeout(() => {
-                   saveChangesBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
-                   // saveChangesBtn.disabled = false; // Podrías rehabilitarlo si quieres permitir más guardados sin cambios
-                }, 2000);
+                const penalizacionesData = [];
+                // Selecciona todas las filas de la tabla que tengan un error ID
+                document.querySelectorAll('#errors-table-body tr[data-error-id]').forEach(row => {
+                    const errorId = row.dataset.errorId;
+                    const inputElement = row.querySelector(`input[type="number"][data-error-id="${errorId}"]`);
+                    if (inputElement) {
+                        penalizacionesData.push({
+                            id_error: parseInt(errorId), // Asegúrate que sea un número si tu backend lo espera así
+                            penalizacion_prof: inputElement.value 
+                        });
+                    }
+                });
+
+                // Obtener el token CSRF del input que añadimos al formulario
+                const csrfToken = document.querySelector('#penalties-form input[name="csrfmiddlewaretoken"]').value;
+
+                console.log("Enviando datos de penalizaciones:", penalizacionesData);
+
+                fetch("{% url 'actualizar_penalizaciones_profesor' %}", { // Usa la URL nombrada
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken // Envía el token CSRF
+                    },
+                    body: JSON.stringify({ penalizaciones: penalizacionesData })
+                })
+                .then(response => response.json().then(data => ({ status: response.status, body: data })))
+                .then(result => {
+                    console.log("Respuesta del servidor:", result);
+                    if (result.status === 200 || result.status === 207) {
+                        alert("Cambios guardados con éxito. " + (result.body.mensaje || ""));
+                        if (nextStepBtn) nextStepBtn.disabled = false;
+                        saveChangesBtn.innerHTML = '<i class="fas fa-check"></i> Guardado';
+                        saveChangesBtn.disabled = true;
+                        // Puedes reiniciar el botón después de un tiempo si quieres
+                        // setTimeout(() => {
+                        //    saveChangesBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+                        //    // saveChangesBtn.disabled = false; 
+                        // }, 2000);
+
+                        if (result.body.no_encontrados && result.body.no_encontrados.length > 0) {
+                            console.warn("Algunos errores no se encontraron:", result.body.no_encontrados);
+                        }
+                        if (result.body.valor_invalido && result.body.valor_invalido.length > 0) {
+                            console.warn("Algunos errores tenían valores de penalización inválidos:", result.body.valor_invalido);
+                        }
+
+                    } else {
+                        alert("Error al guardar los cambios: " + (result.body.error || "Error desconocido."));
+                        if (nextStepBtn) nextStepBtn.disabled = true;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error en la petición fetch:', error);
+                    alert("Error de red o del servidor al intentar guardar los cambios.");
+                    if (nextStepBtn) nextStepBtn.disabled = true;
+                });
+
             } else {
                 alert("Algunos campos de penalización tienen errores o están incompletos.");
-                if(nextStepBtn) nextStepBtn.disabled = true;
+                if (nextStepBtn) nextStepBtn.disabled = true;
             }
         });
     }

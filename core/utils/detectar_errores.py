@@ -8,7 +8,7 @@ import django
 from core.models import EjercicioAlumno, Error, AlumnoErrorEjercicio, Alumno, EnunciadoEjercicio
 
 # Cargar entorno y configurar Django
-load_dotenv()
+load_dotenv(override=True)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "evis_project.settings")
 django.setup()
 
@@ -95,6 +95,7 @@ def detectar_errores(transcripciones: dict, enunciado_obj: EnunciadoEjercicio) -
         max_tokens=4000
     )
 
+    print("Respuesta del modelo recibida.")
     content = response.choices[0].message.content
 
     match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
@@ -108,6 +109,7 @@ def detectar_errores(transcripciones: dict, enunciado_obj: EnunciadoEjercicio) -
         raise ValueError("Corrección: No se encontró un bloque JSON válido.")
 
     # GUARDADO EN BASE DE DATOS
+    print("Guardando errores en la base de datos...")
     for id_error, contenido in errores.items():
         descripcion = contenido.get("descripcion", "").strip()
         penalizacion_llm = contenido.get("penalizacion_llm", 0)

@@ -1,0 +1,18 @@
+En la base de datos cuyo modelo de tablas se muestra a continuación, se pretende almacenar 
+información sobre las temporadas de cada juego que retransmiten distintos streamers en 
+determinadas plataformas de streaming (un streamer retransmite ciertas temporadas en ciertas 
+plataformas). Aclaraciones: 
+• El atributo “Pago_por_minuto” de la tabla “Plataforma” indica cuánto paga (en euros) 
+dicha plataforma a un streamer por cada minuto de visualización de sus vídeos (es de 
+tipo FLOAT).  
+• Todos los identificadores, así como N_Temporada, son también de tipo INT. 
+Se pide escribir los comandos SQL necesarios, para realizar en un SGBD MySQL, las operaciones 
+que se detallan a continuación. No deben suponerse restricciones adicionales (en particular, 
+cualquier atributo que pueda ser nulo sin violar restricciones de integridad, debe poder tomar 
+ese valor).  
+Debe contestarse en el espacio proporcionado en cada caso y con el orden necesario en cada 
+caso para poder leer bien el comando. 
+a) Comando para crear la tabla “Juega”, estableciendo las claves necesarias. La eliminación 
+o actualización de una temporada de un juego o un streamer implica la eliminación o 
+actualización de la información de “Juega” que referencie la parte eliminada o 
+actualizada. 

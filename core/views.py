@@ -56,6 +56,7 @@ class AlumnoErrorEjercicioViewSet(viewsets.ModelViewSet):
 
 class SubirEjercicioView(APIView):
     def post(self, request):
+        print('1:Recibiendo datos de la vista de subida de ejercicios')
         try:
             # 1. Recoger datos del formulario
             asignatura = request.data['asignatura']
@@ -68,13 +69,14 @@ class SubirEjercicioView(APIView):
             puntuacion = request.data['puntuacion']
             archivo_zip = request.FILES['zip']
 
+            print('2:Datos recibidos:', asignatura, convocatoria, fecha_realizacion, nombre_ejercicio, enunciado_ejerc, estructura_tablas, puntuacion)
             # 2. Crear Examen
             examen = Examen.objects.create(
                 asignatura=asignatura,
                 convocatoria=convocatoria,
                 fecha_realizacion=fecha_realizacion
             )
-
+            print('3:Examen creado:', examen)
             # 3. Crear EnunciadoEjercicio con imagen
             enunciado = EnunciadoEjercicio.objects.create(
                 nombre_ejercicio=nombre_ejercicio,
@@ -83,19 +85,22 @@ class SubirEjercicioView(APIView):
                 puntuacion_ejercicio=puntuacion,
                 examen=examen
             )
-
+            print('4:EnunciadoEjercicio creado:', enunciado)
             # 4. Guardar ZIP temporalmente
             zip_path = default_storage.save('tmp/fotos.zip', archivo_zip)
             zip_absoluto = os.path.join(settings.MEDIA_ROOT, zip_path)
 
+            print('5:ZIP guardado en:', zip_absoluto)
             # 5. Crear carpeta destino
             carpeta_destino = os.path.join(settings.MEDIA_ROOT, f'ejercicios/{enunciado.id_enun_ejercicio}')
             os.makedirs(carpeta_destino, exist_ok=True)
 
+            print('6:Carpeta destino creada:', carpeta_destino)
             # 6. Extraer ZIP
             with zipfile.ZipFile(zip_absoluto, 'r') as zip_ref:
                 zip_ref.extractall(carpeta_destino)
 
+            print('7:ZIP extraído en:', carpeta_destino)
             # 7. Crear objetos EjercicioAlumno
             for nombre_archivo in os.listdir(carpeta_destino):
                 if nombre_archivo.lower().endswith(('.jpg', '.jpeg', '.png')):
@@ -115,6 +120,7 @@ class SubirEjercicioView(APIView):
 
             os.remove(zip_absoluto)
 
+            print('8:ZIP eliminado:', zip_absoluto)
             # 8. Ejecutar OCR
             transcripciones = procesar_ocr(carpeta_destino)
 
@@ -125,6 +131,7 @@ class SubirEjercicioView(APIView):
 
             print('Depurar errores generados:', errores_generados)
 
+            print('9:Errores generados:', errores_generados)
             request.session['datos_para_paso2'] = {
                 'nombre': nombre_ejercicio,
                 'asignatura': asignatura,
@@ -467,3 +474,72 @@ def mostrar_historial_correcciones_view(request):
     }
     # Asegúrate que la ruta 'core/ce_5_historial_correcciones.html' sea correcta
     return render(request, 'core/ce_5_historial_correcciones.html', context)
+
+from django.http import JsonResponse
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+from django.db import transaction
+import json
+from .models import Error
+@method_decorator(csrf_protect, name='dispatch') # O ensure_csrf_cookie si prefieres
+class ActualizarPenalizacionesProfesorView(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            # El frontend enviará los datos como JSON
+            data = json.loads(request.body)
+            penalizaciones_actualizar = data.get('penalizaciones')
+
+            if not isinstance(penalizaciones_actualizar, list):
+                return JsonResponse({'error': 'Formato de datos inválido.'}, status=400)
+
+            errores_actualizados_ids = []
+            errores_no_encontrados_ids = []
+            errores_valor_invalido_ids = []
+
+            with transaction.atomic(): # Para asegurar que todas las actualizaciones se hagan o ninguna
+                for item in penalizaciones_actualizar:
+                    error_id = item.get('id_error')
+                    nueva_penalizacion_str = item.get('penalizacion_prof')
+
+                    if error_id is None or nueva_penalizacion_str is None:
+                        # Considera cómo manejar esto, quizás añadir a una lista de errores parciales
+                        continue
+
+                    try:
+                        error_obj = Error.objects.get(pk=error_id)
+                        
+                        # Validar y convertir la nueva penalización
+                        try:
+                            nueva_penalizacion = float(nueva_penalizacion_str)
+                            if not (0 <= nueva_penalizacion <= 10): # Asumiendo tu validación min/max
+                                raise ValueError("Penalización fuera de rango.")
+                        except ValueError:
+                            errores_valor_invalido_ids.append(error_id)
+                            continue # Saltar este error y continuar con el siguiente
+
+                        error_obj.penalizacion_prof = nueva_penalizacion
+                        error_obj.save()
+                        errores_actualizados_ids.append(error_id)
+
+                    except Error.DoesNotExist:
+                        errores_no_encontrados_ids.append(error_id)
+            
+            # Construir una respuesta informativa
+            response_data = {
+                'mensaje': 'Proceso de actualización completado.',
+                'actualizados': len(errores_actualizados_ids),
+                'no_encontrados': errores_no_encontrados_ids,
+                'valor_invalido': errores_valor_invalido_ids
+            }
+            status_code = 200
+            if errores_no_encontrados_ids or errores_valor_invalido_ids:
+                status_code = 207 # Multi-Status, indica éxito parcial
+
+            return JsonResponse(response_data, status=status_code)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Cuerpo de la solicitud no es JSON válido.'}, status=400)
+        except Exception as e:
+            # Considera loggear el error 'e' en el servidor
+            return JsonResponse({'error': f'Ocurrió un error inesperado: {str(e)}'}, status=500)

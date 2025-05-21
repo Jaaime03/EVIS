@@ -9,7 +9,7 @@ import django
 from core.models import EjercicioAlumno, Alumno
 
 # Cargar entorno y configurar Django
-load_dotenv()
+load_dotenv(override=True)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "evis_project.settings")
 django.setup()
 
@@ -26,6 +26,7 @@ def procesar_ocr(carpeta_imagenes: str) -> dict:
     imagenes_contenido = []
     nombres_procesados = []
 
+    print("Procesando imágenes en la carpeta:", carpeta_imagenes)
     for archivo in sorted(os.listdir(carpeta_imagenes)):
         if archivo.lower().endswith((".jpg", ".jpeg", ".png")):
             ruta = os.path.join(carpeta_imagenes, archivo)
@@ -39,6 +40,7 @@ def procesar_ocr(carpeta_imagenes: str) -> dict:
                 })
                 nombres_procesados.append(archivo)
 
+    print("Imágenes procesadas:", nombres_procesados)
     instruccion = (
         "Te voy a enviar varias imágenes de texto manuscrito. "
         "Cada imagen tiene un nombre como '123.jpg', donde '123' es el ID del alumno. "
@@ -53,18 +55,24 @@ def procesar_ocr(carpeta_imagenes: str) -> dict:
         "}\n\n"
         f"Las imágenes que te envío son: {', '.join(nombres_procesados)}"
     )
+    print(f"Endpoint de Azure: {os.environ.get('AZURE_OPENAI_ENDPOINT')}")
+    print(f"API Key de Azure (primeros 5 caracteres): {os.environ.get('AZURE_OPENAI_API_KEY', '')[:5]}") # Solo imprime una parte por seguridad
 
+    print("Instrucción enviada al modelo:", instruccion)
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{
             "role": "user",
             "content": [
                 {"type": "text", "text": instruccion},
-                *imagenes_contenido
+                *imagenes_contenido  # Desempaqueta la lista de imágenes aquí
             ]
         }],
         max_tokens=4000
     )
+    print("Respuesta del modelo recibida.") # Esta línea ahora solo se ejecutará si no hay error
+    # Procesa la respuesta
+    # print(response.choices[0].message.content)
 
     respuesta_texto = response.choices[0].message.content
 
@@ -79,6 +87,7 @@ def procesar_ocr(carpeta_imagenes: str) -> dict:
         logger.error("OCR: JSON generado no válido.")
         raise ValueError("OCR: JSON generado no válido.")
 
+    print("Guardando OCR en la base de datos...")
     # GUARDADO EN BASE DE DATOS
     for id_alumno_str, contenido in resultados.items():
         try:
@@ -102,4 +111,6 @@ def procesar_ocr(carpeta_imagenes: str) -> dict:
         except Exception as e:
             logger.error(f"Error al guardar OCR para {id_alumno_str}: {e}")
 
+    print("OCR guardado en la base de datos.")
+    print("Resultados del OCR:", resultados)
     return resultados
