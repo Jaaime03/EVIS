@@ -433,6 +433,7 @@
             <span class="value">{{ ejercicio.fecha_examen|date:"d/m/Y"|default:"No proporcionada" }}</span>
         </div>
     </div>
+
     <section class="progress-section">
         <h2>Corrección de Exámenes con IA</h2>
         <div class="progress-bar-container">
@@ -451,66 +452,63 @@
         </div>
     </section>
 
-    <div class="validation-ocr-container">
+    <div class="validation-ocr-container" data-total="{{ ejercicios_list|length }}">
         <div class="validation-ocr-header">
             <h2>Validación OCR</h2>
         </div>
 
         <div class="image-navigation">
-            <span class="validations-remaining" id="validations-remaining-text">VALIDACIONES RESTANTES: X/Y</span>
+            <span class="validations-remaining" id="validations-remaining-text">VALIDACIONES RESTANTES: <span id="current-index">1</span>/{{ ejercicios_alumno|length }}</span>
             <div class="nav-buttons">
                 <button id="prev-image-btn" title="Imagen Anterior"><i class="fas fa-arrow-left"></i></button>
                 <button id="next-image-btn" title="Siguiente Imagen"><i class="fas fa-arrow-right"></i></button>
             </div>
         </div>
-    <div id="enlarged-image-popup" class="enlarged-image-popup-area" style="display: none;">
-        <img id="enlarged-image-content" src="#" alt="Imagen Original Ampliada">
-        <button id="close-enlarged-image-btn" class="close-enlarged-btn">&times;</button>
-    </div>
+
+        <div id="enlarged-image-popup" class="enlarged-image-popup-area" style="display: none;">
+            <img id="enlarged-image-content" src="#" alt="Imagen Original Ampliada">
+            <button id="close-enlarged-image-btn" class="close-enlarged-btn">&times;</button>
+        </div>
+
         <div class="ocr-validation-grid">
-    <div class="ocr-column">
-        <h3>Imagen Original</h3>
-        <div class="original-image-area">
-            <img id="original-image-display" src="{% static 'core/img/placeholder_ocr_image.png' %}" alt="Imagen Original del Examen">
-        </div>
-    </div>
+            <div class="ocr-column">
+                <h3>Imagen Original</h3>
+                <div class="original-image-area">
+                    <img id="original-image-display" src="" alt="Imagen Original del Examen">
+                </div>
+            </div>
 
-    <div class="ocr-column">
-        <h3>OCR Análisis</h3>
-        <div class="ocr-text-area" id="ocr-analysis-text">
-            {/* ... Texto OCR ... */}
-        </div>
-    </div>
+            <div class="ocr-column">
+                <h3>OCR Análisis</h3>
+                <div class="ocr-text-area" id="ocr-analysis-text"></div>
+            </div>
 
-    <div class="ocr-column">
-        <h3>TEXTO CORRECTO</h3>
-        {# Nuevo wrapper para estilos de estado #}
-        <div class="corrected-text-area-wrapper" id="corrected-text-wrapper">
-            <textarea id="corrected-text-input" rows="10" disabled></textarea>
-        </div>
-        <div class="validation-buttons" id="validation-buttons-container">
-            {# Botones originales #}
-            <button class="btn-correct" id="btn-transcribed-correctly">BIEN TRANSCRITO</button>
-            <button class="btn-incorrect" id="btn-transcribed-incorrectly">MAL TRANSCRITO</button>
-            
-            {# Nuevos botones para el modo edición (inicialmente ocultos por CSS) #}
-            <button class="btn-correct btn-confirm-correction" id="btn-confirm-correction">Guardar Corrección</button>
-            <button class="btn-incorrect btn-cancel-correction" id="btn-cancel-correction">Cancelar</button>
-        </div>
-        </p>
-    </div>
-</div>
+            <div class="ocr-column">
+                <h3>TEXTO CORRECTO</h3>
+                <div class="corrected-text-area-wrapper" id="corrected-text-wrapper">
+                    <textarea id="corrected-text-input" rows="10" disabled></textarea>
+                </div>
+                <div class="validation-buttons" id="validation-buttons-container">
+                    <button class="btn-correct" id="btn-transcribed-correctly">BIEN TRANSCRITO</button>
+                    <button class="btn-incorrect" id="btn-transcribed-incorrectly">MAL TRANSCRITO</button>
 
-    <div class="page-actions">
-        <button class="btn-page-action prev" id="btn-ocr-previous-page">
-            <i class="fas fa-arrow-left"></i> Anterior
-        </button>
-        <button class="btn-page-action next" id="btn-ocr-next-page" disabled>
-            Siguiente <i class="fas fa-arrow-right"></i>
-        </button>
-    </div>
-    <p class="validation-hint" id="ocr-validation-hint">Debes validar todas las transcripciones antes de poder continuar.</p>
+                    <button class="btn-correct btn-confirm-correction" id="btn-confirm-correction">Guardar Corrección</button>
+                    <button class="btn-incorrect btn-cancel-correction" id="btn-cancel-correction">Cancelar</button>
+                </div>
+            </div>
+        </div>
 
+        <div class="page-actions">
+            <button class="btn-page-action prev" id="btn-ocr-previous-page">
+                <i class="fas fa-arrow-left"></i> Anterior
+            </button>
+            <button class="btn-page-action next" id="btn-ocr-next-page">
+                Siguiente <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <p class="validation-hint" id="ocr-validation-hint">Debes validar todas las transcripciones antes de poder continuar.</p>
+    </div>
 {% endblock content %}
 
 {% block extra_js %}
@@ -545,29 +543,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeEnlargedImageBtn = document.getElementById('close-enlarged-image-btn');
 
     // --- Datos de Ejemplo (Esto vendría del Backend) ---
-    const ocrValidations = [
-        {
-            id: 1,
-            imageUrl: "{% static 'core/img/placeholder_ocr_image.png' %}",
-            ocrText: "CREATE TABLE estudiantes (\n    id INT PRIMARY KEY AUTO_INCREMENT,\n    nombre VARCHAR(100) NOT NULL,\n    edad INT CHECK (edad >= 0),\n    correo VARCHAR(255) UNIQUE\n);",
-            correctedText: null,
-            status: 'pending' // pending, correct, editing, corrected_saved
-        },
-        {
-            id: 2,
-            imageUrl: "{% static 'core/img/placeholder_ocr_image_2.png' %}",
-            ocrText: "SELECT nombre, apellido\nFROM usaurios\nWHERE ciudad = 'Madrid';", // Error intencional
-            correctedText: null,
-            status: 'pending'
-        },
-        {
-            id: 3,
-            imageUrl: "{% static 'core/img/placeholder_ocr_image_3.png' %}",
-            ocrText: "INSERT INTO productos (id, nombre, precio)\nVALUES (1, 'Laptop', 1200.00);",
-            correctedText: null,
-            status: 'pending'
-        }
-    ];
+    const ocrValidations = JSON.parse('{{ ejercicios_alumno|escapejs }}');
+
+    // Agregamos a cada objeto los campos adicionales necesarios para el control
+    ocrValidations.forEach(item => {
+        item.correctedText = item.correccion_humana || null;
+        item.status = 'Pendiente';
+        item.imageUrl = item.imagen_url;
+        item.ocrText = item.ocr_texto;
+    });
 
     let currentImageIndex = 0;
     const totalImages = ocrValidations.length;
