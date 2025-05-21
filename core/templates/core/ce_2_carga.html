@@ -214,25 +214,48 @@
         </form>
     </section>
 {% endblock content %}
-
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    console.log("DOM completamente cargado y parseado para ce_2_carga.html.");
+
+    // --- Selectores de Elementos ---
     const toggleChatGPTButton = document.getElementById('toggle-chatgpt-column-btn'); 
     const errorsTable = document.getElementById('errors-table-element');
     
     const saveChangesBtn = document.getElementById('save-changes-btn');
     const nextStepBtn = document.getElementById('next-step-btn');
+    
+    // Selecciona todos los inputs de penalización del profesor.
+    // Asegúrate que tu HTML tenga inputs que coincidan con este selector.
     const penaltyInputs = document.querySelectorAll('#penalties-form .col-pen-prof input[type="number"]');
-    let currentProgressStep = 1;
+    
+    const progressLine = document.getElementById('progress-line');
+    const step1ProgressEl = document.getElementById('step-1');
+    const step2ProgressEl = document.getElementById('step-2');
+    const step3ProgressEl = document.getElementById('step-3');
+    
+    let currentProgressStep = 1; // El paso actual para esta página es 1 (Penalización Errores)
 
+    // --- Log de Selectores (para depuración) ---
+    console.log("Botón Guardar Cambios:", saveChangesBtn);
+    console.log("Botón Siguiente Paso:", nextStepBtn);
+    console.log("Inputs de Penalización encontrados:", penaltyInputs.length);
+    if (!document.querySelector('#penalties-form input[name="csrfmiddlewaretoken"]')) {
+        console.error("¡ADVERTENCIA! No se encontró el input del token CSRF dentro del formulario #penalties-form.");
+    }
+
+
+    // --- Funciones de UI ---
     function updateProgressBar(step) {
         currentProgressStep = step;
-        const stepsElements = [document.getElementById('step-1'), document.getElementById('step-2'), document.getElementById('step-3')];
-        const progressLine = document.getElementById('progress-line');
+        const stepsElements = [step1ProgressEl, step2ProgressEl, step3ProgressEl];
         
         stepsElements.forEach((stepEl, index) => {
-            if (!stepEl) return; // Seguridad por si un ID no existe
+            if (!stepEl) {
+                console.warn(`Elemento de progreso step-${index+1} no encontrado.`);
+                return; 
+            }
             stepEl.classList.remove('active', 'completed');
             if ((index + 1) < step) {
                 stepEl.classList.add('completed');
@@ -242,17 +265,22 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         
         let progressPercentage = 0;
-        if (stepsElements.length > 1 && stepsElements.every(el => el)) { // Asegurarse que todos los elementos existen
+        if (stepsElements.length > 1 && stepsElements.every(el => el)) {
              if (step === 1) progressPercentage = 0; 
              else if (step === 2) progressPercentage = 50; 
-             else if (step >= 3) progressPercentage = 100; // Si hay mas de 3 pasos, se queda en 100
+             else if (step >= 3) progressPercentage = 100;
         } else if (stepsElements.length === 1 && step >=1 && stepsElements[0]) {
              progressPercentage = 100;
         }
         
-        if(progressLine) progressLine.style.width = `${progressPercentage}%`;
+        if (progressLine) {
+            progressLine.style.width = `${progressPercentage}%`;
+        } else {
+            console.warn("Elemento progress-line no encontrado.");
+        }
     }
-    updateProgressBar(currentProgressStep); // Inicia la barra de progreso
+    // Inicializa la barra de progreso al paso 1 para esta página.
+    updateProgressBar(currentProgressStep); 
 
     if (toggleChatGPTButton && errorsTable) {
         function updateButtonAppearanceForChatGPT() {
@@ -262,37 +290,55 @@ document.addEventListener('DOMContentLoaded', function () {
                 toggleChatGPTButton.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar Penalización GPT';
             }
         }
-        updateButtonAppearanceForChatGPT(); // Sincroniza el botón con el estado inicial de la tabla
+        updateButtonAppearanceForChatGPT(); 
 
         toggleChatGPTButton.addEventListener('click', function() {
             errorsTable.classList.toggle('chatgpt-columna-oculta');
             updateButtonAppearanceForChatGPT(); 
         });
+    } else {
+        if (!toggleChatGPTButton) console.warn("Botón toggle-chatgpt-column-btn no encontrado.");
+        if (!errorsTable) console.warn("Tabla errors-table-element no encontrada.");
     }
     
+    // --- Función de Validación ---
     function validatePenaltyInputs() {
         let allInputsValid = true;
+        if (penaltyInputs.length === 0) {
+            console.warn("No se encontraron inputs de penalización para validar.");
+            // Decide si esto es un error o si la tabla puede estar vacía.
+            // Si puede estar vacía y es válido, podrías retornar true.
+            // Por ahora, si no hay inputs, asumimos que no hay nada que validar mal.
+            return true; 
+        }
         penaltyInputs.forEach(input => {
             const valueStr = input.value.trim();
-            const errorMsgElement = input.nextElementSibling; 
+            const errorMsgElement = input.nextElementSibling; // Asume que <small> es el siguiente hermano
+            
             input.classList.remove('input-error-highlight');
-            if (errorMsgElement) errorMsgElement.style.display = 'none';
+            if (errorMsgElement && errorMsgElement.classList.contains('error-message-text')) { // Asegura que sea el elemento correcto
+                errorMsgElement.style.display = 'none';
+                errorMsgElement.textContent = ''; // Limpiar mensaje anterior
+            }
 
             if (input.required && valueStr === '') {
                 input.classList.add('input-error-highlight');
-                if (errorMsgElement) { errorMsgElement.textContent = 'Campo obligatorio.'; errorMsgElement.style.display = 'block'; }
+                if (errorMsgElement && errorMsgElement.classList.contains('error-message-text')) { 
+                    errorMsgElement.textContent = 'Campo obligatorio.'; 
+                    errorMsgElement.style.display = 'block'; 
+                }
                 allInputsValid = false;
-            } else if (valueStr !== '') {
+            } else if (valueStr !== '') { // Solo validar si no está vacío
                 const valueNum = parseFloat(valueStr); 
                 const min = parseFloat(input.min); 
                 const max = parseFloat(input.max);
                 if (isNaN(valueNum) || (!isNaN(min) && valueNum < min) || (!isNaN(max) && valueNum > max)) {
                     input.classList.add('input-error-highlight');
-                    if (errorMsgElement) { 
+                    if (errorMsgElement && errorMsgElement.classList.contains('error-message-text')) { 
                         let msg = 'Valor inválido.';
-                        if (!isNaN(min) && !isNaN(max)) msg = `Valor entre ${min} y ${max}.`;
-                        else if (!isNaN(min)) msg = `Mínimo ${min}.`;
-                        else if (!isNaN(max)) msg = `Máximo ${max}.`;
+                        if (!isNaN(min) && !isNaN(max)) msg = `Debe estar entre ${min} y ${max}.`;
+                        else if (!isNaN(min)) msg = `Debe ser como mínimo ${min}.`;
+                        else if (!isNaN(max)) msg = `Debe ser como máximo ${max}.`;
                         errorMsgElement.textContent = msg; 
                         errorMsgElement.style.display = 'block'; 
                     }
@@ -303,97 +349,131 @@ document.addEventListener('DOMContentLoaded', function () {
         return allInputsValid;
     }
 
+    // --- Event Listener para el Botón "Guardar Cambios" ---
     if (saveChangesBtn) {
         saveChangesBtn.addEventListener('click', function() {
+            console.log("Botón 'Guardar Cambios' clickeado.");
             if (validatePenaltyInputs()) {
+                console.log("Validación de inputs superada.");
                 const penalizacionesData = [];
-                // Selecciona todas las filas de la tabla que tengan un error ID
+                
                 document.querySelectorAll('#errors-table-body tr[data-error-id]').forEach(row => {
                     const errorId = row.dataset.errorId;
                     const inputElement = row.querySelector(`input[type="number"][data-error-id="${errorId}"]`);
-                    if (inputElement) {
+                    
+                    if (errorId && inputElement) { // Asegurarse que ambos existen
                         penalizacionesData.push({
-                            id_error: parseInt(errorId), // Asegúrate que sea un número si tu backend lo espera así
+                            id_error: parseInt(errorId), 
                             penalizacion_prof: inputElement.value 
                         });
+                    } else {
+                        console.warn("Fila o input sin data-error-id completo:", row);
                     }
                 });
 
-                // Obtener el token CSRF del input que añadimos al formulario
-                const csrfToken = document.querySelector('#penalties-form input[name="csrfmiddlewaretoken"]').value;
+                const csrfTokenInput = document.querySelector('#penalties-form input[name="csrfmiddlewaretoken"]');
+                if (!csrfTokenInput) {
+                    alert("Error CRÍTICO: No se encontró el token CSRF. El formulario no se puede enviar de forma segura.");
+                    console.error("Elemento input CSRF token no encontrado dentro de #penalties-form.");
+                    return; 
+                }
+                const csrfToken = csrfTokenInput.value;
 
-                console.log("Enviando datos de penalizaciones:", penalizacionesData);
+                console.log("Enviando datos de penalizaciones:", JSON.stringify(penalizacionesData, null, 2));
 
-                fetch("{% url 'actualizar_penalizaciones_profesor' %}", { // Usa la URL nombrada
+                fetch("{% url 'actualizar_penalizaciones_profesor' %}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken // Envía el token CSRF
+                        'X-CSRFToken': csrfToken 
                     },
                     body: JSON.stringify({ penalizaciones: penalizacionesData })
                 })
-                .then(response => response.json().then(data => ({ status: response.status, body: data })))
-                .then(result => {
-                    console.log("Respuesta del servidor:", result);
+                .then(response => {
+                    // Guardar el status para usarlo después de parsear el JSON (si es JSON)
+                    const responseStatus = response.status;
+                    // Intentar parsear como JSON. Si falla y no es OK, lanzar error con texto.
+                    return response.json().catch(err => {
+                        // Si .json() falla, intentar obtener el texto de la respuesta
+                        return response.text().then(text => {
+                            // Construir un objeto de error similar al que se esperaría de .json()
+                            // para que el siguiente .then() pueda manejarlo de forma más uniforme.
+                            return Promise.reject({ 
+                                status: responseStatus, 
+                                body: { error: `Respuesta del servidor no fue JSON. Status: ${responseStatus}. Contenido: ${text.substring(0,300)}...` },
+                                originalError: err // Guardar el error original de parseo de JSON
+                            });
+                        });
+                    }).then(data => ({ status: responseStatus, body: data })); // Si .json() tuvo éxito
+                })
+                .then(result => { 
+                    console.log("Respuesta del servidor procesada:", result);
                     if (result.status === 200 || result.status === 207) {
                         alert("Cambios guardados con éxito. " + (result.body.mensaje || ""));
                         if (nextStepBtn) nextStepBtn.disabled = false;
                         saveChangesBtn.innerHTML = '<i class="fas fa-check"></i> Guardado';
                         saveChangesBtn.disabled = true;
-                        // Puedes reiniciar el botón después de un tiempo si quieres
-                        // setTimeout(() => {
-                        //    saveChangesBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
-                        //    // saveChangesBtn.disabled = false; 
-                        // }, 2000);
 
                         if (result.body.no_encontrados && result.body.no_encontrados.length > 0) {
-                            console.warn("Algunos errores no se encontraron:", result.body.no_encontrados);
+                            console.warn("Algunos errores no se encontraron en el servidor:", result.body.no_encontrados);
                         }
                         if (result.body.valor_invalido && result.body.valor_invalido.length > 0) {
-                            console.warn("Algunos errores tenían valores de penalización inválidos:", result.body.valor_invalido);
+                            console.warn("Algunos errores tenían valores de penalización inválidos y no se guardaron:", result.body.valor_invalido);
                         }
-
                     } else {
-                        alert("Error al guardar los cambios: " + (result.body.error || "Error desconocido."));
+                        // Errores devueltos por el servidor como JSON (ej. 400, 403, 404 con JSON error)
+                        alert("Error al guardar los cambios: " + (result.body.error || `Error ${result.status} desconocido.`));
                         if (nextStepBtn) nextStepBtn.disabled = true;
                     }
                 })
-                .catch(error => {
-                    console.error('Error en la petición fetch:', error);
-                    alert("Error de red o del servidor al intentar guardar los cambios.");
+                .catch(errorInfo => { // Captura errores de red, o el reject de la promesa de response.json()
+                    console.error('Error en la petición fetch o al procesar la respuesta:', errorInfo);
+                    let alertMessage = "Error de red o del servidor al intentar guardar los cambios.";
+                    if (errorInfo && errorInfo.body && errorInfo.body.error) { // Si construimos un errorInfo customizado
+                        alertMessage = errorInfo.body.error;
+                    } else if (errorInfo instanceof Error) { // Error de red real
+                        alertMessage = errorInfo.message;
+                    }
+                    alert(alertMessage + " Revisa la consola para más detalles.");
                     if (nextStepBtn) nextStepBtn.disabled = true;
                 });
 
             } else {
+                console.log("Validación de inputs fallida.");
                 alert("Algunos campos de penalización tienen errores o están incompletos.");
                 if (nextStepBtn) nextStepBtn.disabled = true;
             }
         });
+    } else {
+        console.error("Botón 'save-changes-btn' no encontrado en el DOM.");
     }
 
+    // --- Event Listener para el Botón "Siguiente" ---
      if (nextStepBtn) {
         nextStepBtn.addEventListener('click', function() {
-            if (!this.disabled) { // Solo actuar si el botón está habilitado
-            
-                console.log("Botón 'Siguiente' (desde Penalización Errores) pulsado.");
-                console.log("Redirigiendo a la pantalla de Validación OCR...");
-
-             window.location.href = "{% url 'vista_mostrar_paso3_ocr' %}";
-                
-
+            if (!this.disabled) {
+                console.log("Botón 'Siguiente' clickeado, redirigiendo...");
+                window.location.href = "{% url 'vista_mostrar_paso3_ocr' %}";
+            } else {
+                console.log("Botón 'Siguiente' clickeado, pero está deshabilitado.");
             }
         });
+    } else {
+        console.warn("Botón 'next-step-btn' no encontrado.");
     }
 
-    penaltyInputs.forEach(input => {
-        input.addEventListener('input', function() {
-            if(nextStepBtn) nextStepBtn.disabled = true; 
-            if(saveChangesBtn) {
-                saveChangesBtn.disabled = false;
-                saveChangesBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
-            }
+    // --- Event Listener para Cambios en Inputs de Penalización ---
+    if (penaltyInputs.length > 0) {
+        penaltyInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                if (nextStepBtn) nextStepBtn.disabled = true; 
+                if (saveChangesBtn) {
+                    saveChangesBtn.disabled = false;
+                    saveChangesBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+                }
+            });
         });
-    });
+    }
 });
 </script>
 {% endblock extra_js %}

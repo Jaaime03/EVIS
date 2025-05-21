@@ -132,18 +132,15 @@ class SubirEjercicioView(APIView):
             print('Depurar errores generados:', errores_generados)
 
             print('9:Errores generados:', errores_generados)
-            request.session['datos_para_paso2'] = {
-                'nombre': nombre_ejercicio,
-                'asignatura': asignatura,
-                'convocatoria': convocatoria,
-                'fecha_examen_str': fecha_realizacion,
-                'id_enunciado_ejercicio': enunciado.id_enun_ejercicio,
-            }
+            return redirect('vista_mostrar_paso2_correccion', id_enunciado_ejercicio=enunciado.id_enun_ejercicio)
 
-            return HttpResponseRedirect('/correccion-ejercicio-paso2/')
 
         except Exception as e:
-            return Response({'error': str(e)}, status=400)
+            print(f"ERROR en SubirEjercicioView: {str(e)}") # Es bueno imprimir el error en el servidor
+            # Considera loggear el error completo con traceback para mejor depuración
+            import traceback
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=400) # Devuelve un error HTTP 400 al cliente
 
 class ErrorInformacionView(APIView):
     def get(self, request):
@@ -373,51 +370,49 @@ def procesar_carga_y_redirigir_a_paso2_view(request):
 from core.models import Error, EjercicioAlumno, AlumnoErrorEjercicio  # Ajusta import según tu estructura
 
 @login_required
-def mostrar_paso2_correccion_view(request):
-    datos_recibidos = request.session.pop('datos_para_paso2', None)
-
-    ejercicio_actual = {}
-    if datos_recibidos:
-        fecha_obj = None
-        if datos_recibidos.get('fecha_examen_str'):
-            try:
-                fecha_obj = datetime.datetime.strptime(datos_recibidos['fecha_examen_str'], '%Y-%m-%d').date()
-            except ValueError:
-                pass
+def mostrar_paso2_correccion_view(request, id_enunciado_ejercicio): # <--- CORRECTED: Argument added
+    # The rest of your view logic that uses id_enunciado_ejercicio
+    # as we discussed and you implemented previously.
+    try:
+        enunciado = get_object_or_404(EnunciadoEjercicio, pk=id_enunciado_ejercicio)
+        examen = enunciado.examen
 
         ejercicio_actual = {
-            'nombre': datos_recibidos.get('nombre'),
-            'asignatura': datos_recibidos.get('asignatura'),
-            'convocatoria': datos_recibidos.get('convocatoria'),
-            'fecha_examen': fecha_obj,
+            'id_enunciado_ejercicio': enunciado.id_enun_ejercicio,
+            'nombre': enunciado.nombre_ejercicio,
+            'asignatura': examen.asignatura,
+            'convocatoria': examen.convocatoria,
+            'fecha_examen': examen.fecha_realizacion,
         }
 
-        # Consulta errores reales relacionados con este ejercicio
-        # Asumiendo que tienes la relación para filtrar errores relacionados
-        
-        id_enunciado = datos_recibidos.get('id_enunciado_ejercicio')
-        errores = Error.objects.filter(alumnoerrorejercicio__ejercicio_alumno__enunciado__id_enun_ejercicio=id_enunciado).distinct()
+        errores_objs = Error.objects.filter(
+            alumnoerrorejercicio__ejercicio_alumno__enunciado_id=id_enunciado_ejercicio
+        ).distinct()
 
         errores_lista = []
-
-        for error in errores:
-            # Contar cuántos alumnos tienen este error en ejercicios relacionados
-            num_alumnos = AlumnoErrorEjercicio.objects.filter(error=error).values('alumno').distinct().count()
+        for error_obj in errores_objs:
+            num_alumnos = AlumnoErrorEjercicio.objects.filter(
+                error=error_obj, 
+                ejercicio_alumno__enunciado_id=id_enunciado_ejercicio
+            ).values('alumno').distinct().count()
+            
             errores_lista.append({
-                'id': error.id_error,
-                'descripcion': error.descripcion,
-                'penalizacion_gpt': error.penalizacion_llm,
-                'penalizacion_profesor': error.penalizacion_prof,
+                'id': error_obj.id_error,
+                'descripcion': error_obj.descripcion,
+                'penalizacion_gpt': error_obj.penalizacion_llm,
+                'penalizacion_profesor': error_obj.penalizacion_prof,
                 'num_alumnos': num_alumnos,
             })
-    else:
+    except EnunciadoEjercicio.DoesNotExist:
         ejercicio_actual = {
-            'nombre': 'Ejercicio (Datos no encontrados)',
-            'asignatura': 'Asignatura (Datos no encontrados)',
-            'convocatoria': 'Convocatoria (Datos no encontrados)',
+            'nombre': 'Ejercicio (ID no válido o no encontrado)',
+            'asignatura': 'N/A',
+            'convocatoria': 'N/A',
             'fecha_examen': None,
+            'id_enunciado_ejercicio': id_enunciado_ejercicio # Still pass the ID for context if needed
         }
         errores_lista = []
+        # You might want to add a specific error message to the context here
 
     context = {
         'username': request.user.username,
@@ -475,13 +470,13 @@ def mostrar_historial_correcciones_view(request):
     # Asegúrate que la ruta 'core/ce_5_historial_correcciones.html' sea correcta
     return render(request, 'core/ce_5_historial_correcciones.html', context)
 
-from django.http import JsonResponse
-from django.views import View
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
-from django.db import transaction
-import json
-from .models import Error
+from django.views.decorators.csrf import csrf_protect
+from django.views import View
+from django.http import JsonResponse # Asegúrate de tener JsonResponse y otras importaciones necesarias
+from django.db import transaction # Para transaction.atomic()
+import json # Para json.loads()
+from .models import Error # Para el modelo Error
 @method_decorator(csrf_protect, name='dispatch') # O ensure_csrf_cookie si prefieres
 class ActualizarPenalizacionesProfesorView(View):
     def post(self, request, *args, **kwargs):
