@@ -485,6 +485,7 @@ class ActualizarPenalizacionesProfesorView(View):
             data = json.loads(request.body)
             penalizaciones_actualizar = data.get('penalizaciones')
 
+            print("Datos recibidos para actualizar penalizaciones:", penalizaciones_actualizar)
             if not isinstance(penalizaciones_actualizar, list):
                 return JsonResponse({'error': 'Formato de datos inválido.'}, status=400)
 

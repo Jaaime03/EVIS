@@ -191,10 +191,12 @@
                         <td>{{ error.descripcion }}</td>
                         <td class="col-pen-gpt">{{ error.penalizacion_gpt|default_if_none:"-" }}</td>
                         <td class="col-pen-prof">
-                            <input type="number" name="penalizacion_prof_{{ error.id }}"
-                                   value="{{ error.penalizacion_profesor|default_if_none:'' }}"
-                                   placeholder="-" step="0.01" min="0" max="10" required>
-                            <small class="error-message-text" style="display: none;"></small>
+                    <input type="number" 
+                   name="penalizacion_prof_{{ error.id }}"
+                   data-error-id="{{ error.id }}"  
+                   value="{{ error.penalizacion_profesor|default_if_none:'' }}"
+                   placeholder="-" step="0.01" min="0" max="10" required>
+            <small class="error-message-text" style="display: none;"></small>
                         </td>
                         <td class="col-alumnos">{{ error.num_alumnos }}</td>
                     </tr>
@@ -217,53 +219,48 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    console.log("DOM completamente cargado y parseado para ce_2_carga.html.");
+    console.log("JS: DOM completamente cargado para ce_2_carga.html (Opción 1 Selector).");
 
-    // --- Selectores de Elementos ---
+    // --- Selectores de Elementos (sin cambios respecto a la versión anterior) ---
     const toggleChatGPTButton = document.getElementById('toggle-chatgpt-column-btn'); 
     const errorsTable = document.getElementById('errors-table-element');
-    
     const saveChangesBtn = document.getElementById('save-changes-btn');
     const nextStepBtn = document.getElementById('next-step-btn');
-    
-    // Selecciona todos los inputs de penalización del profesor.
-    // Asegúrate que tu HTML tenga inputs que coincidan con este selector.
     const penaltyInputs = document.querySelectorAll('#penalties-form .col-pen-prof input[type="number"]');
-    
     const progressLine = document.getElementById('progress-line');
     const step1ProgressEl = document.getElementById('step-1');
     const step2ProgressEl = document.getElementById('step-2');
     const step3ProgressEl = document.getElementById('step-3');
-    
-    let currentProgressStep = 1; // El paso actual para esta página es 1 (Penalización Errores)
+    const csrfTokenInput = document.querySelector('#penalties-form input[name="csrfmiddlewaretoken"]');
 
-    // --- Log de Selectores (para depuración) ---
-    console.log("Botón Guardar Cambios:", saveChangesBtn);
-    console.log("Botón Siguiente Paso:", nextStepBtn);
-    console.log("Inputs de Penalización encontrados:", penaltyInputs.length);
-    if (!document.querySelector('#penalties-form input[name="csrfmiddlewaretoken"]')) {
-        console.error("¡ADVERTENCIA! No se encontró el input del token CSRF dentro del formulario #penalties-form.");
+    let currentProgressStep = 1;
+    let hasSavedAtLeastOnce = false;
+
+    // --- Logs de Selectores Iniciales (sin cambios) ---
+    console.log("JS SELECTOR: toggleChatGPTButton:", toggleChatGPTButton);
+    console.log("JS SELECTOR: errorsTable:", errorsTable);
+    console.log("JS SELECTOR: saveChangesBtn:", saveChangesBtn);
+    console.log("JS SELECTOR: nextStepBtn:", nextStepBtn);
+    console.log("JS SELECTOR: penaltyInputs encontrados:", penaltyInputs.length);
+    if (!csrfTokenInput) {
+        console.error("JS CRÍTICO: Input de CSRF Token NO encontrado...");
+    } else {
+        console.log("JS SELECTOR: CSRF Token Input ENCONTRADO.");
+    }
+    if (nextStepBtn) { 
+        nextStepBtn.disabled = true;
     }
 
-
-    // --- Funciones de UI ---
-    function updateProgressBar(step) {
+    // --- Funciones de UI (updateProgressBar, toggleChatGPTButton) - Sin cambios ---
+    function updateProgressBar(step) { /* ... (exactamente como antes) ... */
         currentProgressStep = step;
         const stepsElements = [step1ProgressEl, step2ProgressEl, step3ProgressEl];
-        
         stepsElements.forEach((stepEl, index) => {
-            if (!stepEl) {
-                console.warn(`Elemento de progreso step-${index+1} no encontrado.`);
-                return; 
-            }
+            if (!stepEl) return; 
             stepEl.classList.remove('active', 'completed');
-            if ((index + 1) < step) {
-                stepEl.classList.add('completed');
-            } else if ((index + 1) === step) {
-                stepEl.classList.add('active');
-            }
+            if ((index + 1) < step) stepEl.classList.add('completed');
+            else if ((index + 1) === step) stepEl.classList.add('active');
         });
-        
         let progressPercentage = 0;
         if (stepsElements.length > 1 && stepsElements.every(el => el)) {
              if (step === 1) progressPercentage = 0; 
@@ -272,17 +269,11 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (stepsElements.length === 1 && step >=1 && stepsElements[0]) {
              progressPercentage = 100;
         }
-        
-        if (progressLine) {
-            progressLine.style.width = `${progressPercentage}%`;
-        } else {
-            console.warn("Elemento progress-line no encontrado.");
-        }
+        if (progressLine) progressLine.style.width = `${progressPercentage}%`;
     }
-    // Inicializa la barra de progreso al paso 1 para esta página.
     updateProgressBar(currentProgressStep); 
 
-    if (toggleChatGPTButton && errorsTable) {
+    if (toggleChatGPTButton && errorsTable) { /* ... (exactamente como antes) ... */
         function updateButtonAppearanceForChatGPT() {
             if (errorsTable.classList.contains('chatgpt-columna-oculta')) {
                 toggleChatGPTButton.innerHTML = '<i class="fas fa-eye"></i> Mostrar Penalización GPT';
@@ -291,179 +282,145 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
         updateButtonAppearanceForChatGPT(); 
-
         toggleChatGPTButton.addEventListener('click', function() {
+            console.log("JS EVENT: Click en 'Mostrar/Ocultar Penalización GPT'");
             errorsTable.classList.toggle('chatgpt-columna-oculta');
             updateButtonAppearanceForChatGPT(); 
         });
-    } else {
-        if (!toggleChatGPTButton) console.warn("Botón toggle-chatgpt-column-btn no encontrado.");
-        if (!errorsTable) console.warn("Tabla errors-table-element no encontrada.");
+        console.log("JS INFO: Event listener para 'toggleChatGPTButton' añadido.");
     }
     
-    // --- Función de Validación ---
-    function validatePenaltyInputs() {
+    // --- Función de Validación de Inputs (validatePenaltyInputs) - Sin cambios ---
+    function validatePenaltyInputs() { /* ... (exactamente como antes) ... */
+        console.log("JS VALIDATE: Iniciando validación...");
         let allInputsValid = true;
         if (penaltyInputs.length === 0) {
-            console.warn("No se encontraron inputs de penalización para validar.");
-            // Decide si esto es un error o si la tabla puede estar vacía.
-            // Si puede estar vacía y es válido, podrías retornar true.
-            // Por ahora, si no hay inputs, asumimos que no hay nada que validar mal.
+            console.warn("JS VALIDATE: No hay inputs de penalización para validar.");
             return true; 
         }
-        penaltyInputs.forEach(input => {
+        penaltyInputs.forEach((input, index) => {
             const valueStr = input.value.trim();
-            const errorMsgElement = input.nextElementSibling; // Asume que <small> es el siguiente hermano
-            
+            const errorMsgElement = input.nextElementSibling;
             input.classList.remove('input-error-highlight');
-            if (errorMsgElement && errorMsgElement.classList.contains('error-message-text')) { // Asegura que sea el elemento correcto
-                errorMsgElement.style.display = 'none';
-                errorMsgElement.textContent = ''; // Limpiar mensaje anterior
+            if (errorMsgElement && errorMsgElement.classList.contains('error-message-text')) {
+                errorMsgElement.style.display = 'none'; errorMsgElement.textContent = '';
             }
-
             if (input.required && valueStr === '') {
-                input.classList.add('input-error-highlight');
+                allInputsValid = false; input.classList.add('input-error-highlight');
                 if (errorMsgElement && errorMsgElement.classList.contains('error-message-text')) { 
-                    errorMsgElement.textContent = 'Campo obligatorio.'; 
-                    errorMsgElement.style.display = 'block'; 
-                }
-                allInputsValid = false;
-            } else if (valueStr !== '') { // Solo validar si no está vacío
-                const valueNum = parseFloat(valueStr); 
-                const min = parseFloat(input.min); 
-                const max = parseFloat(input.max);
+                    errorMsgElement.textContent = 'Campo obligatorio.'; errorMsgElement.style.display = 'block'; }
+                console.warn(`JS VALIDATE: Input ${index} (name: ${input.name}) es requerido y está vacío.`);
+            } else if (valueStr !== '') {
+                const valueNum = parseFloat(valueStr); const min = parseFloat(input.min); const max = parseFloat(input.max);
                 if (isNaN(valueNum) || (!isNaN(min) && valueNum < min) || (!isNaN(max) && valueNum > max)) {
-                    input.classList.add('input-error-highlight');
+                    allInputsValid = false; input.classList.add('input-error-highlight');
                     if (errorMsgElement && errorMsgElement.classList.contains('error-message-text')) { 
                         let msg = 'Valor inválido.';
                         if (!isNaN(min) && !isNaN(max)) msg = `Debe estar entre ${min} y ${max}.`;
-                        else if (!isNaN(min)) msg = `Debe ser como mínimo ${min}.`;
-                        else if (!isNaN(max)) msg = `Debe ser como máximo ${max}.`;
-                        errorMsgElement.textContent = msg; 
-                        errorMsgElement.style.display = 'block'; 
-                    }
-                    allInputsValid = false;
+                        else if (!isNaN(min)) msg = `Mínimo ${min}.`; else if (!isNaN(max)) msg = `Máximo ${max}.`;
+                        errorMsgElement.textContent = msg; errorMsgElement.style.display = 'block'; }
+                    console.warn(`JS VALIDATE: Input ${index} (name: ${input.name}) valor inválido/fuera de rango: ${valueStr}`);
                 }
             }
         });
+        console.log("JS VALIDATE: Resultado:", allInputsValid);
         return allInputsValid;
     }
 
     // --- Event Listener para el Botón "Guardar Cambios" ---
     if (saveChangesBtn) {
         saveChangesBtn.addEventListener('click', function() {
-            console.log("Botón 'Guardar Cambios' clickeado.");
+            console.log("JS EVENT: Botón 'Guardar Cambios' clickeado.");
+            // ... (verificación CSRF como antes) ...
+            if (!csrfTokenInput || !csrfTokenInput.value) {
+                alert("Error CRÍTICO: Token CSRF no encontrado."); console.error("JS ERROR en Guardar: CSRF Token input no encontrado."); return; 
+            }
+            const csrfToken = csrfTokenInput.value;
+
             if (validatePenaltyInputs()) {
-                console.log("Validación de inputs superada.");
+                console.log("JS SAVE: Validación superada.");
                 const penalizacionesData = [];
-                
-                document.querySelectorAll('#errors-table-body tr[data-error-id]').forEach(row => {
-                    const errorId = row.dataset.errorId;
-                    const inputElement = row.querySelector(`input[type="number"][data-error-id="${errorId}"]`);
+                const filasDeError = document.querySelectorAll('#errors-table-body tr[data-error-id]');
+                console.log(`JS SAVE: Filas encontradas con [data-error-id]: ${filasDeError.length}`);
+
+                filasDeError.forEach((row, index) => {
+                    const errorId = row.dataset.errorId; // Se obtiene de la fila <tr>
                     
-                    if (errorId && inputElement) { // Asegurarse que ambos existen
-                        penalizacionesData.push({
-                            id_error: parseInt(errorId), 
-                            penalizacion_prof: inputElement.value 
-                        });
+                    // --- LÍNEA CLAVE A CAMBIAR (Volviendo a la Opción 1) ---
+                    // Ahora buscamos el input DENTRO de la fila que también tenga el mismo data-error-id
+                    const inputElement = row.querySelector(`input[type="number"][data-error-id="${errorId}"]`);
+                    // Este selector asume que el input para la penalización del profesor ahora TIENE 'data-error-id'.
+                    
+                    console.log(`JS SAVE: Fila ${index} - errorId: ${errorId}, buscando input con data-error-id="${errorId}". Encontrado:`, inputElement);
+                    
+                    if (errorId && inputElement) { // Si ambos se encuentran
+                        const valorPenalizacion = inputElement.value;
+                        penalizacionesData.push({ id_error: parseInt(errorId), penalizacion_prof: valorPenalizacion });
                     } else {
-                        console.warn("Fila o input sin data-error-id completo:", row);
+                        console.warn(`JS SAVE: Fila ${index} - NO AÑADIDO. errorId: '${errorId}', inputElement:`, inputElement, "(Revisa que el input tenga data-error-id)");
                     }
                 });
-
-                const csrfTokenInput = document.querySelector('#penalties-form input[name="csrfmiddlewaretoken"]');
-                if (!csrfTokenInput) {
-                    alert("Error CRÍTICO: No se encontró el token CSRF. El formulario no se puede enviar de forma segura.");
-                    console.error("Elemento input CSRF token no encontrado dentro de #penalties-form.");
-                    return; 
-                }
-                const csrfToken = csrfTokenInput.value;
-
-                console.log("Enviando datos de penalizaciones:", JSON.stringify(penalizacionesData, null, 2));
-
+                
+                console.log("JS SAVE: penalizacionesData final ANTES de enviar:", JSON.stringify(penalizacionesData, null, 2));
+                
+                // ... (resto de la lógica fetch, manejo de respuesta, y botones - exactamente como antes) ...
+                saveChangesBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...'; saveChangesBtn.disabled = true;
                 fetch("{% url 'actualizar_penalizaciones_profesor' %}", {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken 
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                     body: JSON.stringify({ penalizaciones: penalizacionesData })
                 })
-                .then(response => {
-                    // Guardar el status para usarlo después de parsear el JSON (si es JSON)
-                    const responseStatus = response.status;
-                    // Intentar parsear como JSON. Si falla y no es OK, lanzar error con texto.
-                    return response.json().catch(err => {
-                        // Si .json() falla, intentar obtener el texto de la respuesta
-                        return response.text().then(text => {
-                            // Construir un objeto de error similar al que se esperaría de .json()
-                            // para que el siguiente .then() pueda manejarlo de forma más uniforme.
-                            return Promise.reject({ 
-                                status: responseStatus, 
-                                body: { error: `Respuesta del servidor no fue JSON. Status: ${responseStatus}. Contenido: ${text.substring(0,300)}...` },
-                                originalError: err // Guardar el error original de parseo de JSON
-                            });
-                        });
-                    }).then(data => ({ status: responseStatus, body: data })); // Si .json() tuvo éxito
+                .then(response => { 
+                    const responseStatus = response.status; const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        return response.json().then(data => ({ status: responseStatus, body: data, isJson: true }));
+                    } else {
+                        return response.text().then(text => ({ status: responseStatus, body: text, isJson: false }));
+                    }
                 })
                 .then(result => { 
-                    console.log("Respuesta del servidor procesada:", result);
-                    if (result.status === 200 || result.status === 207) {
-                        alert("Cambios guardados con éxito. " + (result.body.mensaje || ""));
-                        if (nextStepBtn) nextStepBtn.disabled = false;
-                        saveChangesBtn.innerHTML = '<i class="fas fa-check"></i> Guardado';
-                        saveChangesBtn.disabled = true;
-
-                        if (result.body.no_encontrados && result.body.no_encontrados.length > 0) {
-                            console.warn("Algunos errores no se encontraron en el servidor:", result.body.no_encontrados);
-                        }
-                        if (result.body.valor_invalido && result.body.valor_invalido.length > 0) {
-                            console.warn("Algunos errores tenían valores de penalización inválidos y no se guardaron:", result.body.valor_invalido);
+                    console.log("JS SAVE: Respuesta del servidor:", result);
+                    saveChangesBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios'; 
+                    saveChangesBtn.disabled = false; 
+                    if (result.isJson) {
+                        if (result.status === 200 || result.status === 207) {
+                            alert("Guardado: " + (result.body.mensaje || "OK"));
+                            hasSavedAtLeastOnce = true;
+                            if (nextStepBtn) nextStepBtn.disabled = false;
+                        } else {
+                            alert("Error al guardar: " + (result.body.error || `Error ${result.status}`));
+                            if (nextStepBtn) nextStepBtn.disabled = true;
                         }
                     } else {
-                        // Errores devueltos por el servidor como JSON (ej. 400, 403, 404 con JSON error)
-                        alert("Error al guardar los cambios: " + (result.body.error || `Error ${result.status} desconocido.`));
+                        alert(`Error: Respuesta inesperada (Status: ${result.status}). Ver consola.`);
                         if (nextStepBtn) nextStepBtn.disabled = true;
                     }
                 })
-                .catch(errorInfo => { // Captura errores de red, o el reject de la promesa de response.json()
-                    console.error('Error en la petición fetch o al procesar la respuesta:', errorInfo);
-                    let alertMessage = "Error de red o del servidor al intentar guardar los cambios.";
-                    if (errorInfo && errorInfo.body && errorInfo.body.error) { // Si construimos un errorInfo customizado
-                        alertMessage = errorInfo.body.error;
-                    } else if (errorInfo instanceof Error) { // Error de red real
-                        alertMessage = errorInfo.message;
-                    }
-                    alert(alertMessage + " Revisa la consola para más detalles.");
+                .catch(error => { 
+                    console.error('JS ERROR: Error en fetch:', error);
+                    alert("Error de red/servidor. Ver consola.");
+                    saveChangesBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios'; 
+                    saveChangesBtn.disabled = false;
                     if (nextStepBtn) nextStepBtn.disabled = true;
                 });
-
             } else {
-                console.log("Validación de inputs fallida.");
-                alert("Algunos campos de penalización tienen errores o están incompletos.");
-                if (nextStepBtn) nextStepBtn.disabled = true;
+                console.warn("JS SAVE: Validación fallida.");
+                alert("Campos inválidos.");
             }
         });
-    } else {
-        console.error("Botón 'save-changes-btn' no encontrado en el DOM.");
+        console.log("JS INFO: Event listener para 'saveChangesBtn' añadido.");
     }
 
-    // --- Event Listener para el Botón "Siguiente" ---
-     if (nextStepBtn) {
+    // --- Event Listeners para Next Button y Penalty Inputs (sin cambios) ---
+    if (nextStepBtn) { /* ... (exactamente como antes) ... */
         nextStepBtn.addEventListener('click', function() {
-            if (!this.disabled) {
-                console.log("Botón 'Siguiente' clickeado, redirigiendo...");
-                window.location.href = "{% url 'vista_mostrar_paso3_ocr' %}";
-            } else {
-                console.log("Botón 'Siguiente' clickeado, pero está deshabilitado.");
-            }
+            if (!hasSavedAtLeastOnce) { alert("Debes guardar los cambios al menos una vez."); return; }
+            if (!this.disabled) window.location.href = "{% url 'vista_mostrar_paso3_ocr' %}";
         });
-    } else {
-        console.warn("Botón 'next-step-btn' no encontrado.");
+        console.log("JS INFO: Event listener para 'nextStepBtn' añadido.");
     }
 
-    // --- Event Listener para Cambios en Inputs de Penalización ---
-    if (penaltyInputs.length > 0) {
+    if (penaltyInputs.length > 0) { /* ... (exactamente como antes) ... */
         penaltyInputs.forEach(input => {
             input.addEventListener('input', function() {
                 if (nextStepBtn) nextStepBtn.disabled = true; 
@@ -473,6 +430,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         });
+        console.log("JS INFO: Event listeners para 'penaltyInputs' añadidos.");
     }
 });
 </script>
