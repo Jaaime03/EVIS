@@ -147,6 +147,8 @@ STATIC_URL = '/static/'
 
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'mediafiles' # O si no usas pathlib: os.path.join(BASE_DIR, 'mediafiles')
 
 
 LOGIN_REDIRECT_URL = '/eleccion_menu/'

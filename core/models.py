@@ -40,7 +40,7 @@ class EjercicioAlumno(models.Model):
     alumno = models.ForeignKey(Alumno, on_delete=models.PROTECT, related_name='ejercicios_alumno')
     url_foto_ejerc = models.URLField(max_length=500)
     ocr_imag_to_text = models.TextField(blank=True, null=True)
-    correcto_ocr = models.BooleanField(default=False)
+    correcto_ocr = models.BooleanField(default=True)
     correccion_ocr_hum = models.TextField(blank=True, null=True)
     calif_profesor_solo = models.FloatField(blank=True, null=True)
     estado = models.CharField(max_length=50, default='pendiente')
