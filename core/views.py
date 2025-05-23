@@ -1,5 +1,6 @@
 # core/views.py
 import os
+import json
 import zipfile
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -16,6 +17,7 @@ from .serializers import ExamenSerializer, EnunciadoEjercicioSerializer, Ejercic
 from django.shortcuts import get_object_or_404
 import datetime
 from rest_framework.viewsets import ModelViewSet
+from django.core.serializers.json import DjangoJSONEncoder
 
 from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
@@ -160,9 +162,8 @@ class ErrorInformacionView(APIView):
 
         return Response(data, status=200)
 
-    
 class ActualizarPenalizacionProfView(APIView):
-    def post(self, request, pk):
+    def patch(self, request, pk):
         try:
             error = Error.objects.get(pk=pk)
         except Error.DoesNotExist:
@@ -422,19 +423,57 @@ def mostrar_paso2_correccion_view(request, id_enunciado_ejercicio): # <--- CORRE
     }
     return render(request, 'core/ce_2_carga.html', context)
 
-
 # En core/views.py
 @login_required
 def mostrar_paso3_validacion_ocr_view(request):
-    # Por ahora, no se necesita pasar datos específicos del ejercicio,
-    # ya que la plantilla usa datos de ejemplo en su JS.
-    # Cuando integres el backend, aquí cargarías los datos reales
-    # del ejercicio y sus imágenes/textos OCR.
+    datos_recibidos = request.session.get('datos_para_paso2', None)
+
+    ejercicio_actual = {}
+    if datos_recibidos:
+        fecha_obj = None
+        if datos_recibidos.get('fecha_examen_str'):
+            try:
+                fecha_obj = datetime.datetime.strptime(datos_recibidos['fecha_examen_str'], '%Y-%m-%d').date()
+            except ValueError:
+                pass
+
+        ejercicio_actual = {
+            'nombre': datos_recibidos.get('nombre'),
+            'asignatura': datos_recibidos.get('asignatura'),
+            'convocatoria': datos_recibidos.get('convocatoria'),
+            'fecha_examen': fecha_obj,
+        }
+
+        # Obtener ejercicios relacionados con ese id
+        id_enunciado = datos_recibidos.get('id_enunciado_ejercicio')
+        ejercicios_qs = EjercicioAlumno.objects.filter(enunciado__id_enun_ejercicio=id_enunciado).select_related('alumno')
+
+        ejercicios_list = [
+            {
+                'id': e.id_ejercicio_alum,
+                'imagen_url': e.url_foto_ejerc,
+                'ocr_texto': e.ocr_imag_to_text or '',
+                'correccion_humana': e.correccion_ocr_hum or ''
+            }
+            for e in ejercicios_qs
+        ]
+
+    else:
+        ejercicio_actual = {
+            'nombre': 'Ejercicio (Datos no encontrados)',
+            'asignatura': 'Asignatura (Datos no encontrados)',
+            'convocatoria': 'Convocatoria (Datos no encontrados)',
+            'fecha_examen': None,
+        }
+        ejercicios_list = []
+
     context = {
         'username': request.user.username,
         'is_superuser': request.user.is_superuser,
-        # 'ejercicio': datos_del_ejercicio_actual, # Descomentar cuando tengas los datos
+        'ejercicio': ejercicio_actual,
+        'ejercicios_alumno': json.dumps(ejercicios_list, cls=DjangoJSONEncoder)
     }
+
     return render(request, 'core/ce_3_validacion_ocr.html', context)
 
 
