@@ -9,6 +9,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from core.models import Examen, EnunciadoEjercicio, EjercicioAlumno, Alumno
 from core.utils.procesar_ocr import procesar_ocr
+from core.utils.individual_procesar_ocr import individual_procesar_ocr
 from core.utils.detectar_errores import detectar_errores
 from core.pagination import ImagenOCRPagination, EjercicioAlumnoPagination
 from rest_framework import viewsets
@@ -125,6 +126,8 @@ class SubirEjercicioView(APIView):
             print('8:ZIP eliminado:', zip_absoluto)
             # 8. Ejecutar OCR
             transcripciones = procesar_ocr(carpeta_destino)
+            # Opción de hacerlo imagen a imagen (individualmente)
+            # transcripciones = individual_procesar_ocr(carpeta_destino, enunciado)
 
             print('Depurar OCR:', transcripciones)
 
