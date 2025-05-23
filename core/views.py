@@ -370,6 +370,8 @@ def procesar_carga_y_redirigir_a_paso2_view(request):
 
 from core.models import Error, EjercicioAlumno, AlumnoErrorEjercicio  # Ajusta import según tu estructura
 
+
+#SIN USO REAL. SE PUEDE BORRAR
 @login_required
 def mostrar_paso2_correccion_view(request, id_enunciado_ejercicio): # <--- CORRECTED: Argument added
     # The rest of your view logic that uses id_enunciado_ejercicio
@@ -423,59 +425,69 @@ def mostrar_paso2_correccion_view(request, id_enunciado_ejercicio): # <--- CORRE
     }
     return render(request, 'core/ce_2_carga.html', context)
 
-# En core/views.py
+
 @login_required
-def mostrar_paso3_validacion_ocr_view(request):
-    datos_recibidos = request.session.get('datos_para_paso2', None)
-
-    ejercicio_actual = {}
-    if datos_recibidos:
-        fecha_obj = None
-        if datos_recibidos.get('fecha_examen_str'):
-            try:
-                fecha_obj = datetime.datetime.strptime(datos_recibidos['fecha_examen_str'], '%Y-%m-%d').date()
-            except ValueError:
-                pass
+def mostrar_paso3_validacion_ocr_view(request, id_enunciado_ejercicio): # <--- ACEPTAR EL ID
+    try:
+        # Obtener el EnunciadoEjercicio usando el ID de la URL
+        enunciado = get_object_or_404(EnunciadoEjercicio, pk=id_enunciado_ejercicio)
+        examen = enunciado.examen
 
         ejercicio_actual = {
-            'nombre': datos_recibidos.get('nombre'),
-            'asignatura': datos_recibidos.get('asignatura'),
-            'convocatoria': datos_recibidos.get('convocatoria'),
-            'fecha_examen': fecha_obj,
+            'id_enunciado_ejercicio': enunciado.id_enun_ejercicio, # Pasar el ID a la plantilla
+            'nombre': enunciado.nombre_ejercicio,
+            'asignatura': examen.asignatura,
+            'convocatoria': examen.convocatoria,
+            'fecha_examen': examen.fecha_realizacion,
         }
 
-        # Obtener ejercicios relacionados con ese id
-        id_enunciado = datos_recibidos.get('id_enunciado_ejercicio')
-        ejercicios_qs = EjercicioAlumno.objects.filter(enunciado__id_enun_ejercicio=id_enunciado).select_related('alumno')
+        # Obtener los EjercicioAlumno relacionados con este enunciado
+        ejercicios_qs = EjercicioAlumno.objects.filter(enunciado_id=id_enunciado_ejercicio).select_related('alumno')
 
-        ejercicios_list = [
-            {
-                'id': e.id_ejercicio_alum,
-                'imagen_url': e.url_foto_ejerc,
+        ejercicios_list_for_js = []
+        for e in ejercicios_qs:
+            # Construir la URL completa para la imagen si url_foto_ejerc guarda una ruta relativa a MEDIA_ROOT
+            imagen_full_url = ""
+            if e.url_foto_ejerc: # Verificar que no esté vacío
+                # Asumiendo que e.url_foto_ejerc es algo como "ejercicios/27/imagen.jpg"
+                # y que MEDIA_URL está configurado en settings.py (ej. '/media/')
+                imagen_full_url = request.build_absolute_uri(os.path.join(settings.MEDIA_URL, e.url_foto_ejerc))
+                # Si e.url_foto_ejerc ya es una URL completa, no necesitas build_absolute_uri ni MEDIA_URL
+
+            ejercicios_list_for_js.append({
+                'id': e.id_ejercicio_alum, # Este es el ID de EjercicioAlumno
+                'id_alumno': e.alumno.id_alumno, # Para identificar al alumno
+                'nombre_alumno': f"{e.alumno.nombre} {e.alumno.apellidos}", # Opcional, para mostrar
+                'imagen_url': imagen_full_url, # URL completa de la imagen
                 'ocr_texto': e.ocr_imag_to_text or '',
-                'correccion_humana': e.correccion_ocr_hum or ''
-            }
-            for e in ejercicios_qs
-        ]
+                'correccion_humana': e.correccion_ocr_hum or '',
+                # Campos para el estado de validación en JS (se inicializan en JS pero podrías pre-cargarlos si ya existen)
+                'status': e.estado or 'pending', # Usar el campo 'estado' existente
+                'correctedText': e.correccion_ocr_hum or None
+            })
+        
+        # Eliminar la dependencia de la sesión para estos datos
+        # request.session.pop('datos_para_paso2', None) # Opcional, si ya no se usa para nada más
 
-    else:
+    except EnunciadoEjercicio.DoesNotExist:
         ejercicio_actual = {
-            'nombre': 'Ejercicio (Datos no encontrados)',
-            'asignatura': 'Asignatura (Datos no encontrados)',
-            'convocatoria': 'Convocatoria (Datos no encontrados)',
+            'nombre': 'Ejercicio (ID no válido o no encontrado)',
+            'asignatura': 'N/A',
+            'convocatoria': 'N/A',
             'fecha_examen': None,
+            'id_enunciado_ejercicio': id_enunciado_ejercicio # Pasar el ID incluso si no se encontró
         }
-        ejercicios_list = []
+        ejercicios_list_for_js = []
 
     context = {
         'username': request.user.username,
         'is_superuser': request.user.is_superuser,
-        'ejercicio': ejercicio_actual,
-        'ejercicios_alumno': json.dumps(ejercicios_list, cls=DjangoJSONEncoder)
+        'ejercicio': ejercicio_actual, # Contiene info del EnunciadoEjercicio
+        # Pasamos la lista como JSON string para que JavaScript la pueda parsear fácilmente
+        'ejercicios_alumno_json': json.dumps(ejercicios_list_for_js, cls=DjangoJSONEncoder)
     }
 
     return render(request, 'core/ce_3_validacion_ocr.html', context)
-
 
 @login_required
 def mostrar_paso4_correccion_final_view(request):

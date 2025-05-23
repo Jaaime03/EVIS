@@ -415,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (nextStepBtn) { /* ... (exactamente como antes) ... */
         nextStepBtn.addEventListener('click', function() {
             if (!hasSavedAtLeastOnce) { alert("Debes guardar los cambios al menos una vez."); return; }
-            if (!this.disabled) window.location.href = "{% url 'vista_mostrar_paso3_ocr' %}";
+            if (!this.disabled) window.location.href = "{% url 'vista_mostrar_paso3_ocr' id_enunciado_ejercicio=ejercicio.id_enunciado_ejercicio %}";
         });
         console.log("JS INFO: Event listener para 'nextStepBtn' añadido.");
     }

@@ -514,51 +514,76 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- Selectores de Elementos ---
+    console.log("JS DEBUG: DOM cargado para ce_3_validacion_ocr.html.");
+
+    // --- Selectores de Elementos (como los tenías, deberían estar bien) ---
     const progressLine = document.getElementById('progress-line');
-    // const step1Progress = document.getElementById('step-1'); // Ya no se necesita manipular directamente aquí
-    // const step2Progress = document.getElementById('step-2'); // Se manipula en updateProgressBarOCR
-    // const step3Progress = document.getElementById('step-3'); // Se manipula en updateProgressBarOCR
-
     const validationsRemainingText = document.getElementById('validations-remaining-text');
-    const prevImageBtn = document.getElementById('prev-image-btn');
-    const nextImageBtn = document.getElementById('next-image-btn');
-
+    const prevImageBtn = document.getElementById('prev-image-btn'); // Navegación entre imágenes de alumnos
+    const nextImageBtn = document.getElementById('next-image-btn'); // Navegación entre imágenes de alumnos
     const ocrAnalysisText = document.getElementById('ocr-analysis-text');
     const correctedTextWrapper = document.getElementById('corrected-text-wrapper');
     const correctedTextInput = document.getElementById('corrected-text-input');
     const validationButtonsContainer = document.getElementById('validation-buttons-container');
-
     const btnTranscribedCorrectly = document.getElementById('btn-transcribed-correctly');
     const btnTranscribedIncorrectly = document.getElementById('btn-transcribed-incorrectly');
     const btnConfirmCorrection = document.getElementById('btn-confirm-correction');
     const btnCancelCorrection = document.getElementById('btn-cancel-correction');
-
-    const btnOcrPreviousPage = document.getElementById('btn-ocr-previous-page');
-    const btnOcrNextPage = document.getElementById('btn-ocr-next-page');
+    const btnOcrPreviousPage = document.getElementById('btn-ocr-previous-page'); // Botón grande "Anterior" (al paso 2)
+    const btnOcrNextPage = document.getElementById('btn-ocr-next-page');     // Botón grande "Siguiente" (al paso 4)
     const ocrValidationHint = document.getElementById('ocr-validation-hint');
     const originalImageDisplay = document.getElementById('original-image-display');
     const enlargedImagePopup = document.getElementById('enlarged-image-popup');
     const enlargedImageContent = document.getElementById('enlarged-image-content');
     const closeEnlargedImageBtn = document.getElementById('close-enlarged-image-btn');
 
-    // --- Datos de Ejemplo (Esto vendría del Backend) ---
-    const ocrValidations = JSON.parse('{{ ejercicios_alumno|escapejs }}');
+    // ID del enunciado actual, pasado desde el contexto de la vista Django
+    const enunciadoId = "{{ ejercicio.id_enunciado_ejercicio|default_if_none:'' }}";
+    // If the value is numeric, output as-is; if possibly null, output null (no quotes)
+    // If you want to ensure it's always a number or null, use:
+    // const enunciadoId = {{ ejercicio.id_enunciado_ejercicio|default:"null" }};
+    // If you want to ensure it's a string or null, use:
+    // const enunciadoId = "{{ ejercicio.id_enunciado_ejercicio|default_if_none:'' }}";
+    console.log("JS DEBUG: Enunciado ID actual:", enunciadoId);
 
-    // Agregamos a cada objeto los campos adicionales necesarios para el control
-    ocrValidations.forEach(item => {
-        item.correctedText = item.correccion_humana || null;
-        item.status = 'Pendiente';
-        item.imageUrl = item.imagen_url;
-        item.ocrText = item.ocr_texto;
-    });
+    // --- Carga y Preparación de Datos de Ejercicios de Alumnos ---
+    const ejerciciosAlumnoJsonString = '{{ ejercicios_alumno_json|escapejs|default:"[]" }}';
+    let ocrValidations = []; // Este será nuestro array de trabajo
+
+    try {
+        const rawOcrData = JSON.parse(ejerciciosAlumnoJsonString);
+        console.log("JS DEBUG: Datos OCR crudos parseados desde Django:", rawOcrData);
+        // Mapear y asegurar campos necesarios para la lógica JS existente
+        ocrValidations = rawOcrData.map(item => ({
+            id: item.id, // ID de EjercicioAlumno
+            id_alumno_str: item.id_alumno_str, // ID del Alumno
+            // El JS espera 'imageUrl' y 'ocrText' para las funciones loadValidationData/setValidationInterfaceState
+            // La vista ahora envía 'imagen_url' y 'ocr_texto'. Hacemos el mapeo aquí:
+            imageUrl: item.imagen_url, 
+            ocrText: item.ocr_texto,   
+            correctedText: item.correctedText === undefined ? (item.correccion_humana || null) : item.correctedText,
+            status: item.status || 'pending' 
+        }));
+        console.log("JS DEBUG: Datos OCR procesados para el JS (ocrValidations):", ocrValidations);
+    } catch (e) {
+        console.error("JS ERROR: Al parsear ejercicios_alumno_json:", e, "\nString recibido:", ejerciciosAlumnoJsonString);
+        alert("Error al cargar los datos de los ejercicios. Por favor, recarga la página o contacta a soporte.");
+        // Deshabilitar controles si los datos no se cargan
+        if(prevImageBtn) prevImageBtn.disabled = true;
+        if(nextImageBtn) nextImageBtn.disabled = true;
+        if(btnOcrNextPage) btnOcrNextPage.disabled = true;
+    }
 
     let currentImageIndex = 0;
     const totalImages = ocrValidations.length;
 
-    // --- Funciones ---
+    // --- Funciones (updateProgressBarOCR, setValidationInterfaceState, loadValidationData, etc.) ---
+    // Estas funciones deberían estar bien como las tenías, siempre que usen
+    // ocrValidations[currentImageIndex].imageUrl y ocrValidations[currentImageIndex].ocrText
+    // y ocrValidations[currentImageIndex].correctedText
+
     function updateProgressBarOCR() {
-        if (progressLine) progressLine.style.width = '50%';
+        if (progressLine) progressLine.style.width = '50%'; // Paso 2 de 3 -> 50%
         document.getElementById('step-1')?.classList.add('completed');
         document.getElementById('step-1')?.classList.remove('active');
         document.getElementById('step-2')?.classList.add('active');
@@ -567,28 +592,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function setValidationInterfaceState(status) {
+        if (!ocrValidations[currentImageIndex]) return; // Seguridad
         correctedTextWrapper.classList.remove('status-correct', 'status-corrected-saved', 'status-editing', 'disabled');
         validationButtonsContainer.classList.remove('editing');
 
+        const currentOcrItem = ocrValidations[currentImageIndex];
         switch (status) {
             case 'pending':
-                correctedTextInput.value = ocrValidations[currentImageIndex].ocrText;
+                correctedTextInput.value = currentOcrItem.ocrText; // Usa ocrText
                 correctedTextInput.disabled = true;
-                correctedTextWrapper.classList.add('disabled'); // Estilo por defecto/deshabilitado
+                correctedTextWrapper.classList.add('disabled');
                 break;
             case 'correct':
-                correctedTextInput.value = ocrValidations[currentImageIndex].ocrText;
+                correctedTextInput.value = currentOcrItem.ocrText; // Usa ocrText
                 correctedTextInput.disabled = true;
                 correctedTextWrapper.classList.add('status-correct', 'disabled');
                 break;
             case 'corrected_saved':
-                correctedTextInput.value = ocrValidations[currentImageIndex].correctedText || '';
+                correctedTextInput.value = currentOcrItem.correctedText || ''; // Usa correctedText
                 correctedTextInput.disabled = true;
                 correctedTextWrapper.classList.add('status-corrected-saved', 'disabled');
                 break;
             case 'editing':
-                // Al entrar en edición, el textarea toma el valor de ocrText o el correctedText si ya existía
-                correctedTextInput.value = ocrValidations[currentImageIndex].correctedText || ocrValidations[currentImageIndex].ocrText;
+                correctedTextInput.value = currentOcrItem.correctedText || currentOcrItem.ocrText;
                 correctedTextInput.disabled = false;
                 correctedTextWrapper.classList.add('status-editing');
                 validationButtonsContainer.classList.add('editing');
@@ -598,228 +624,214 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadValidationData(index) {
-        const data = ocrValidations[index];
-        if (!data) return;
-
-        originalImageDisplay.src = data.imageUrl;
-        ocrAnalysisText.textContent = data.ocrText;
-        
-        // Si el estado es 'editing' y navegamos, lo revertimos a 'pending' o al último estado guardado.
-        // Para esta simulación, si estaba 'editing', lo volvemos a 'pending' al cargar una nueva imagen.
-        // Una lógica más robusta preguntaría si guardar cambios.
-        if (data.status === 'editing' && index !== currentImageIndex) { // Si no es la imagen actual que se estaba editando
-             data.status = 'pending'; // O el último estado guardado
+        if (index < 0 || index >= ocrValidations.length) {
+            console.warn("JS WARN: Índice fuera de rango para loadValidationData:", index);
+            return;
         }
-        if (enlargedImagePopup && enlargedImagePopup.style.display === 'flex') { // O 'block' si usas ese display para mostrarlo
-            if (enlargedImageContent) { // Chequeo extra por si acaso
-                enlargedImageContent.src = data.imageUrl; // Actualiza la imagen del popup
+        const data = ocrValidations[index];
+        if (!data) {
+            console.error("JS ERROR: No hay datos para el índice:", index, "en ocrValidations.");
+            return;
+        }
+
+        originalImageDisplay.src = data.imageUrl || "{% static 'core/img/placeholder_ocr_image.png' %}"; // Usa imageUrl
+        ocrAnalysisText.textContent = data.ocrText || "No disponible"; // Usa ocrText
+        
+        if (data.status === 'editing' && index !== currentImageIndex) {
+             data.status = 'pending'; 
+        }
+        if (enlargedImagePopup && enlargedImagePopup.style.display === 'flex') {
+            if (enlargedImageContent) {
+                enlargedImageContent.src = data.imageUrl || "{% static 'core/img/placeholder_ocr_image.png' %}";
             }
         }
-        currentImageIndex = index; // Actualizar el índice global
+        currentImageIndex = index;
         setValidationInterfaceState(data.status);
-
         updateNavigation();
         checkAllValidated();
     }
 
     function updateNavigation() {
+        if (!validationsRemainingText || !prevImageBtn || !nextImageBtn) return;
         const pendingCount = ocrValidations.filter(v => v.status === 'pending' || v.status === 'editing').length;
-        validationsRemainingText.textContent = `VALIDACIONES RESTANTES: ${pendingCount}/${totalImages} (Mostrando ${currentImageIndex + 1}/${totalImages})`;
+        // Actualizar el span anidado para el índice actual, y el texto general
+        const currentIndexDisplay = document.getElementById('current-index'); 
+        if (currentIndexDisplay) currentIndexDisplay.textContent = totalImages > 0 ? currentImageIndex + 1 : 0;
+        
+        const totalImagesDisplay = totalImages; // El total no cambia
+        
+        validationsRemainingText.innerHTML = `VALIDACIONES RESTANTES: ${pendingCount}/${totalImages} (Mostrando <span id="current-index">${totalImages > 0 ? currentImageIndex + 1 : 0}</span>/${totalImagesDisplay})`;
+
         prevImageBtn.disabled = currentImageIndex === 0;
         nextImageBtn.disabled = currentImageIndex === totalImages - 1;
     }
 
     function checkAllValidated() {
+        if(!btnOcrNextPage || !ocrValidationHint) return;
         const allDone = ocrValidations.every(v => v.status === 'correct' || v.status === 'corrected_saved');
         btnOcrNextPage.disabled = !allDone;
         ocrValidationHint.classList.toggle('visible', !allDone);
     }
 
     function goToNextImageOrFinish() {
+        // Aquí es donde llamarías al backend para guardar la validación actual
+        // Por ahora, solo actualiza el estado en el array JS y navega
+        const currentData = ocrValidations[currentImageIndex];
+        console.log(`JS DEBUG: Guardando estado para imagen ${currentData.id}: ${currentData.status}, Texto: ${currentData.correctedText || currentData.ocrText}`);
+        // TODO: Implementar llamada fetch para guardar 'currentData' en el backend.
+        // URL podría ser algo como /ejercicio-alumno/${currentData.id}/correccion-ocr/
+        // y el body contendría { correcto_ocr: (status === 'correct'), correccion_ocr_hum: (status === 'corrected_saved' ? correctedText : '') }
+
         if (currentImageIndex < totalImages - 1) {
             currentImageIndex++;
             loadValidationData(currentImageIndex);
         } else {
-            loadValidationData(currentImageIndex); // Recargar la última para mostrar su estado final
-            alert("Todas las imágenes han sido procesadas para validación.");
-            // checkAllValidated() ya se llama en loadValidationData
+            loadValidationData(currentImageIndex); 
+            alert("Todas las imágenes han sido procesadas para validación en esta página.");
         }
+        checkAllValidated(); // Asegurarse que el botón "Siguiente" se actualice
     }
 
-    // --- Event Listeners ---
-    if (originalImageDisplay && enlargedImagePopup && enlargedImageContent) {
+    // --- Event Listeners (Mayormente como los tenías) ---
+    if (originalImageDisplay && enlargedImagePopup && enlargedImageContent && closeEnlargedImageBtn) {
         originalImageDisplay.addEventListener('click', function() {
-            enlargedImageContent.src = this.src; // Poner la imagen clickeada en el popup
-            enlargedImagePopup.style.display = 'flex'; // Mostrar el popup
-            // Quita cualquier clase 'zoomed' si la usabas antes
-            // this.classList.remove('zoomed'); 
+            enlargedImageContent.src = this.src; 
+            enlargedImagePopup.style.display = 'flex'; 
         });
-    }
-
-    // Listener para el botón de CERRAR del popup
-    if (closeEnlargedImageBtn && enlargedImagePopup) {
         closeEnlargedImageBtn.addEventListener('click', function() {
-            enlargedImagePopup.style.display = 'none'; // Ocultar el popup
+            enlargedImagePopup.style.display = 'none'; 
         });
-    }
-
-    // (Opcional) Listener para CERRAR el popup haciendo clic en la imagen ampliada misma
-    if (enlargedImageContent && enlargedImagePopup) {
-        enlargedImageContent.addEventListener('click', function() {
-            // Esto cerraría el popup al hacer clic en la imagen ampliada.
-            // Puedes omitir esto si solo quieres el botón X.
-            // enlargedImagePopup.style.display = 'none';
-        });
-    }
-    
-    // (Opcional) Listener para CERRAR el popup con la tecla 'Escape'
-    document.addEventListener('keydown', function(event) {
-        if (event.key === "Escape" && enlargedImagePopup.style.display === 'flex') {
-            enlargedImagePopup.style.display = 'none';
-        }
-    });
-if (originalImageDisplay && enlargedImagePopup && enlargedImageContent) {
-    originalImageDisplay.addEventListener('click', function() {
-        enlargedImageContent.src = this.src;
-        enlargedImagePopup.style.display = 'flex'; // Mostrar el popup (empujará contenido)
-    });
-}
-
-// Listener para el botón de CERRAR del popup
-if (closeEnlargedImageBtn && enlargedImagePopup) {
-    closeEnlargedImageBtn.addEventListener('click', function() {
-        enlargedImagePopup.style.display = 'none'; // Ocultar el popup (contenido volverá a su sitio)
-    });
-}
-
-// (Opcional) Listener para CERRAR el popup con la tecla 'Escape'
-document.addEventListener('keydown', function(event) {
-    if (event.key === "Escape" && enlargedImagePopup.style.display === 'flex') { // O 'block' si cambiaste el display
-        enlargedImagePopup.style.display = 'none';
-    }
-});
-    if (originalImageDisplay) {
-        originalImageDisplay.addEventListener('click', function() {
-            this.classList.toggle('zoomed');
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape" && enlargedImagePopup.style.display === 'flex') {
+                enlargedImagePopup.style.display = 'none';
+            }
         });
     }
 
     if (prevImageBtn) {
-        prevImageBtn.addEventListener('click', () => {
+        prevImageBtn.addEventListener('click', () => { /* ... (lógica sin cambios, pero verifica que usa 'currentData.status') ... */
             const currentData = ocrValidations[currentImageIndex];
             if (currentData.status === 'editing') {
-                alert("Por favor, guarda o cancela tu corrección actual antes de navegar.");
-                return;
+                alert("Por favor, guarda o cancela tu corrección actual antes de navegar."); return;
             }
-            if (currentImageIndex > 0) {
-                currentImageIndex--;
-                loadValidationData(currentImageIndex);
-            }
+            if (currentImageIndex > 0) { currentImageIndex--; loadValidationData(currentImageIndex); }
         });
     }
 
     if (nextImageBtn) {
-        nextImageBtn.addEventListener('click', () => {
+        nextImageBtn.addEventListener('click', () => { /* ... (lógica sin cambios, pero verifica que usa 'currentData.status') ... */
             const currentData = ocrValidations[currentImageIndex];
             if (currentData.status === 'editing') {
-                alert("Por favor, guarda o cancela tu corrección actual antes de navegar.");
-                return;
+                alert("Por favor, guarda o cancela tu corrección actual antes de navegar."); return;
             }
-            if (currentImageIndex < totalImages - 1) {
-                currentImageIndex++;
-                loadValidationData(currentImageIndex);
-            }
+            if (currentImageIndex < totalImages - 1) { currentImageIndex++; loadValidationData(currentImageIndex); }
         });
     }
 
     if (btnTranscribedCorrectly) {
-        btnTranscribedCorrectly.addEventListener('click', () => {
+        btnTranscribedCorrectly.addEventListener('click', () => { /* ... (lógica sin cambios) ... */
             const currentData = ocrValidations[currentImageIndex];
             currentData.status = 'correct';
             currentData.correctedText = currentData.ocrText;
-            // La llamada a setValidationInterfaceState ahora se hace en goToNextImageOrFinish via loadValidationData
-            console.log(`Imagen ${currentData.id}: Marcada como BIEN TRANSCRITA.`);
-            // SIMULACIÓN: Guardar en backend
-            // saveValidationToBackend(currentData.id, 'correct', currentData.ocrText);
+            console.log(`JS DEBUG: Imagen ${currentData.id}: Marcada como BIEN TRANSCRITA.`);
             goToNextImageOrFinish();
         });
     }
 
     if (btnTranscribedIncorrectly) {
-        btnTranscribedIncorrectly.addEventListener('click', () => {
+        btnTranscribedIncorrectly.addEventListener('click', () => { /* ... (lógica sin cambios) ... */
             const currentData = ocrValidations[currentImageIndex];
             currentData.status = 'editing';
             setValidationInterfaceState('editing');
-            console.log(`Imagen ${currentData.id}: Marcada como MAL TRANSCRITA, habilitando edición.`);
+            console.log(`JS DEBUG: Imagen ${currentData.id}: Marcada como MAL TRANSCRITA, habilitando edición.`);
         });
     }
 
     if (btnConfirmCorrection) {
-        btnConfirmCorrection.addEventListener('click', () => {
+        btnConfirmCorrection.addEventListener('click', () => { /* ... (lógica sin cambios) ... */
             const currentData = ocrValidations[currentImageIndex];
             currentData.correctedText = correctedTextInput.value;
             currentData.status = 'corrected_saved';
-            // La llamada a setValidationInterfaceState ahora se hace en goToNextImageOrFinish via loadValidationData
-            console.log(`Imagen ${currentData.id}: Corrección GUARDADA: "${currentData.correctedText}"`);
-            // SIMULACIÓN: Guardar en backend
-            // saveValidationToBackend(currentData.id, 'corrected_saved', currentData.correctedText);
+            console.log(`JS DEBUG: Imagen ${currentData.id}: Corrección GUARDADA: "${currentData.correctedText}"`);
             goToNextImageOrFinish();
         });
     }
 
     if (btnCancelCorrection) {
-        btnCancelCorrection.addEventListener('click', () => {
+        btnCancelCorrection.addEventListener('click', () => { /* ... (lógica sin cambios) ... */
             const currentData = ocrValidations[currentImageIndex];
             currentData.status = 'pending'; 
-            // correctedText se queda como estaba antes de entrar en modo edición, o se limpia
-            // Si el ocrText es la fuente de verdad para 'pending', entonces:
-            currentData.correctedText = null; // Opcional, depende de tu lógica de datos
+            currentData.correctedText = null; 
             setValidationInterfaceState('pending');
-            console.log(`Imagen ${currentData.id}: Corrección CANCELADA.`);
+            console.log(`JS DEBUG: Imagen ${currentData.id}: Corrección CANCELADA.`);
         });
     }
     
+    // BOTÓN "ANTERIOR" DE LA PÁGINA (AL PASO 2)
     if (btnOcrPreviousPage) {
         btnOcrPreviousPage.addEventListener('click', () => {
-            console.log("Guardando validaciones (simulación):", JSON.stringify(ocrValidations.map(v => ({id: v.id, status: v.status, text: v.correctedText || v.ocrText }))));
-            alert("Validaciones 'guardadas' (simulación). Volviendo a la página anterior...");
-            window.location.href = "{% url 'vista_mostrar_paso2_correccion' %}"; // Asegúrate que este nombre de URL sea el correcto
-        });
-    }
+            console.log("JS DEBUG: Click en Anterior (para ir al paso 2)");
+            if (enunciadoId) { // enunciadoId definido globalmente en este script
+                let urlPaso2 = "{% url 'vista_mostrar_paso2_correccion' id_enunciado_ejercicio=0 %}".replace('0', enunciadoId.toString());
+                // Corrección: .replace('/0/', `/${enunciadoId}/`) es más seguro si el ID no es siempre un solo dígito.
+                // O mejor, si enunciadoId es el único argumento:
+                urlPaso2 = "{% url 'vista_mostrar_paso2_correccion' 0 %}".replace('0', enunciadoId.toString());
+                // Para la estructura de tu URL actual '/corregir-ejercicio/<int:id_enunciado_ejercicio>/paso2/'
+                // la forma más segura de construirlo es:
+                const baseUrlPaso2 = "{% url 'vista_mostrar_paso2_correccion' id_enunciado_ejercicio=99999 %}"; // Un ID placeholder
+                urlPaso2 = baseUrlPaso2.replace('99999', enunciadoId.toString());
 
+                console.log("JS DEBUG: Volviendo a Penalización Errores:", urlPaso2);
+                window.location.href = urlPaso2;
+            } else {
+                console.error("JS ERROR: No se pudo obtener id_enunciado_ejercicio para volver al paso 2.");
+                window.location.href = "{% url 'eleccion_menu' %}"; // Fallback
+            }
+        });
+    }   
+
+    // BOTÓN "SIGUIENTE" DE LA PÁGINA (AL PASO 4)
     if (btnOcrNextPage) {
         btnOcrNextPage.addEventListener('click', () => {
-            if (!btnOcrNextPage.disabled) {
-                console.log("Guardando TODAS las validaciones (simulación):", JSON.stringify(ocrValidations.map(v => ({id: v.id, status: v.status, text: v.correctedText || v.ocrText }))));
-                alert("Todas las validaciones completadas y 'guardadas' (simulación). Avanzando a la siguiente fase...");
-                
-                // Actualizar la barra de progreso al paso 3
-                document.getElementById('step-2')?.classList.remove('active');
-                document.getElementById('step-2')?.classList.add('completed');
-                document.getElementById('step-3')?.classList.add('active');
-                if(progressLine) progressLine.style.width = '100%';
-                
-                // Aquí redirigirías a la URL del paso 3 real si la tuvieras
-                window.location.href = "{% url 'vista_mostrar_paso4_final' %}";
+            if (!btnOcrNextPage.disabled) { 
+                console.log("JS DEBUG: Click en Siguiente (para ir al paso 4)");
+                if (enunciadoId) { // enunciadoId definido globalmente
+                    console.log("JS DEBUG: Todas las validaciones completadas. Avanzando...");
+                    
+                    document.getElementById('step-2')?.classList.remove('active');
+                    document.getElementById('step-2')?.classList.add('completed');
+                    document.getElementById('step-3')?.classList.add('active');
+                    if(progressLine) progressLine.style.width = '100%';
+                    
+                    const baseUrlPaso4 = "{% url 'vista_mostrar_paso4_final' id_enunciado_ejercicio=99999 %}"; // ID placeholder
+                    const urlPaso4 = baseUrlPaso4.replace('99999', enunciadoId.toString());
+                    
+                    console.log("JS DEBUG: Avanzando a Corrección Final:", urlPaso4);
+                    window.location.href = urlPaso4;
+                } else {
+                    console.error("JS ERROR: No se pudo obtener id_enunciado_ejercicio para ir al paso 4.");
+                    alert("Error: No se pudo determinar el ejercicio para continuar.");
+                }
             }
         });
     }
 
     // --- Inicialización ---
     updateProgressBarOCR();
-    if (ocrValidations.length > 0) {
+    if (ocrValidations && ocrValidations.length > 0) { // Comprueba que ocrValidations exista y tenga items
         loadValidationData(currentImageIndex);
     } else {
-        // Manejar caso sin imágenes para validar
-        validationsRemainingText.textContent = "No hay imágenes para validar.";
-        prevImageBtn.disabled = true;
-        nextImageBtn.disabled = true;
-        btnTranscribedCorrectly.disabled = true;
-        btnTranscribedIncorrectly.disabled = true;
-        btnConfirmCorrection.disabled = true;
-        btnCancelCorrection.disabled = true;
-        btnOcrNextPage.disabled = false; // O true si se requiere al menos una validación
-        ocrValidationHint.classList.remove('visible');
+        console.warn("JS WARN: No hay datos OCR para validar al inicializar.");
+        if(validationsRemainingText) validationsRemainingText.textContent = "No hay imágenes para validar.";
+        if(prevImageBtn) prevImageBtn.disabled = true;
+        if(nextImageBtn) nextImageBtn.disabled = true;
+        if(btnTranscribedCorrectly) btnTranscribedCorrectly.disabled = true;
+        if(btnTranscribedIncorrectly) btnTranscribedIncorrectly.disabled = true;
+        if(btnConfirmCorrection) btnConfirmCorrection.disabled = true;
+        if(btnCancelCorrection) btnCancelCorrection.disabled = true;
+        if(btnOcrNextPage) btnOcrNextPage.disabled = true; // Si no hay imágenes, no se puede pasar al siguiente.
+        if(ocrValidationHint) ocrValidationHint.textContent = "No hay ejercicios para validar.";
+        if(ocrValidationHint) ocrValidationHint.classList.add('visible');
     }
 });
 </script>
